@@ -66,10 +66,7 @@ int main() {
 			{
 				printf("Ciao\n");
 				char buf[1024];
-				int numBytes = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) & cliaddr, &len);
-				n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
-                    MSG_WAITALL, ( struct sockaddr *) &cliaddr, 
-                    &len); 
+				n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len); 
 				buffer[n] = '\0'; 
 				printf("Client : %s\n", buffer); 
 				printf("Client has port %u\n", cliaddr.sin_port);
