@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <time.h>
+#include <thread>
 
 #include "Manager.h"
 #include "utilities.h"
+
 
 static int wait_for_start = 1;
 
@@ -44,8 +46,10 @@ int main(int argc, char** argv) {
 	// Here we must initialize everything!
     Manager* manager = parse_input_data(argc, argv);
 
+    manager->run();
 
-	//wait until start signal
+
+    //wait until start signal
 	while(wait_for_start) {
 		struct timespec sleep_time;
 		sleep_time.tv_sec = 0;

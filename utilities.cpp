@@ -10,7 +10,6 @@
 
 #include "utilities.h"
 #include "Manager.h"
-#include "Sender.h"
 
 
 using namespace std;
@@ -41,7 +40,6 @@ Manager* parse_input_data(int argc, char** argv){
     mem_in >> number_of_processes;
     cout << "The number of processes is " << number_of_processes << endl;
     // one of them will remain empty.
-    vector<Sender*> senders(number_of_processes);
     vector<int> ports(number_of_processes);
     vector<char*> ips(number_of_processes);
     vector<int> processes(number_of_processes);
@@ -61,14 +59,8 @@ Manager* parse_input_data(int argc, char** argv){
 
     int number_of_messages;
     mem_in >> number_of_messages;
+    cout << "number of messages " << number_of_messages << endl;
 
-    for (int i = 0; i<number_of_processes; i++){
-        if (i != process_number){
-            Sender* s = new Sender(number_of_messages, s_port, ports[i], addr, ips[i]);
-            senders[i] = s;
-        }
-    }
-
-    Manager* m = new Manager(senders);
+    Manager* m = new Manager(ports, ips, processes, s_port, addr, process_number);
     return m;
 }
