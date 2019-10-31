@@ -61,6 +61,6 @@ Manager* parse_input_data(int argc, char** argv){
     mem_in >> number_of_messages;
     cout << "number of messages " << number_of_messages << endl;
 
-    Manager* m = new Manager(ports, ips, processes, s_port, addr, process_number);
+    Manager* m = new Manager(ports, ips, processes, process_number, number_of_messages);
     return m;
 }

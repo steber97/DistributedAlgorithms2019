@@ -1,7 +1,3 @@
-//
-// Created by stefano on 31/10/19.
-//
-
 #ifndef PROJECT_TEMPLATE_MANAGER_H
 #define PROJECT_TEMPLATE_MANAGER_H
 
@@ -21,15 +17,14 @@
 using namespace std;
 
 class Manager {
-
     vector<int> ports;
     vector<char*> ips;
     vector<int> processes;
-    int s_port;
-    char*  addr;
     int process_number;
+    int number_of_messages;
 public:
-    Manager(vector<int>& ports, vector<char*>& ips, vector<int>& processes, int s_port, char* addr, int process_number);        // Constructor
+    Manager(vector<int> &ports, vector<char *> &ips, vector<int> &processes, int process_number,
+            int number_of_messages);        // Constructor
 
 
     void run();
