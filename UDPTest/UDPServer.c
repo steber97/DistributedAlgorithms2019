@@ -8,9 +8,14 @@
 #include <sys/socket.h> 
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
+#include <vector>
+#include <iostream>
+
 
 #define PORT    12001 
 #define MAXLINE 1024 
+
+using namespace std;
 
 // Driver code 
 int main() {  
@@ -18,6 +23,7 @@ int main() {
 	char buffer[MAXLINE]; 
 	char hello[] = "Hello from server"; 
 	struct sockaddr_in servaddr, cliaddr; 
+	
 	
 	// Creating socket file descriptor 
 	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
@@ -68,17 +74,15 @@ int main() {
 				char buf[1024];
 				n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len); 
 				buffer[n] = '\0'; 
-				printf("Client : %s\n", buffer); 
-				printf("Client has port %u\n", cliaddr.sin_port);
-				sendto(sockfd, (const char *)hello, strlen(hello), 
-					MSG_CONFIRM, (const struct sockaddr *) &cliaddr, 
-						len); 
-				printf("Hello message sent.\n"); 
+				v.push_back(1);
+				cout << buffer << endl;
 			}
 		}
       	else{
 			printf("select\n");
 		}
+
+		cout << "size = " << v.size() << endl;
          
     }
 	return 0; 
