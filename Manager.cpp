@@ -146,12 +146,20 @@ void Manager::run(){
     pthread_t senders[this->processes.size()];
     void *status;
 
+    vector<thread_data> td;
+
     for (int i = 0; i<this->processes.size(); i++){
         cout << "Create thread " << this->process_number << " " << this->number_of_messages << endl;
         if (i+1 != this->process_number){
             cout << this->ports[i] << endl;
-            thread_data td{ this->number_of_messages, this->ips[i],this->ports[i]};
-            pthread_create(&senders[i], NULL, run_sender, (void *)&td);
+            thread_data temp{ this->number_of_messages, this->ips[i],this->ports[i]};
+            td.push_back(temp);
+            //td[i] = temp;
+            pthread_create(&senders[i], NULL, run_sender, (void *)&td[i]);
+        }
+        else{
+            // the process itself.
+            td.push_back({ this->number_of_messages, this->ips[i],this->ports[i]});
         }
     }
 
