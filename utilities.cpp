@@ -51,6 +51,7 @@ Manager* parse_input_data(int argc, char** argv){
         ips[i] = new char[10];
         mem_in >> ips[i] ;
         mem_in >> ports[i];
+        cout << processes[i] << " " << ips[i] << " " << ports[i] << " " << endl;
         if (i+1 == process_number){
             s_port = ports[i];
             addr = ips[i];

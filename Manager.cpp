@@ -84,8 +84,13 @@ void run_receiver(char* receiver_addr, int s_port){
 }
 
 
-void run_sender(int total_number_of_messages, const char* destination_addr, int d_port){
-    cout << "Create a new sender" << endl;
+void* run_sender(void *threadarg){
+    struct thread_data *my_data;
+    my_data = (struct thread_data *) threadarg;
+    cout << "Create a new sender on port " << my_data->d_port << endl;
+    int d_port = my_data->d_port;
+    int total_number_of_messages = my_data->total_number_of_messages;
+    const char* destination_addr = my_data->destination_addr;
 
     struct sockaddr_in d_addr;
     int last_ack = 0;
@@ -100,10 +105,14 @@ void run_sender(int total_number_of_messages, const char* destination_addr, int 
         cerr << "socket creation failed";
         exit(EXIT_FAILURE);
     }
+    cout << "ciao" << endl;
     memset(&d_addr, 0, sizeof(d_addr));
+    cout << "ciao " << d_port << " " << destination_addr << " " << total_number_of_messages << endl;
     d_addr.sin_family = AF_INET;
-    d_addr.sin_port = htons(d_port);
-    // inet_pton(AF_INET, destination_addr, &(d_addr.sin_addr));
+    d_addr.sin_port = htonl(d_port);
+    // wrong line here
+    cout << destination_addr << endl;
+    inet_pton(AF_INET, destination_addr, &(d_addr.sin_addr));
 
     while(last_ack <= total_number_of_messages){
         string message = "0" + to_string(last_sent);
@@ -138,10 +147,11 @@ void Manager::run(){
     void *status;
 
     for (int i = 0; i<this->processes.size(); i++){
-        cout << "Create thread" << endl;
+        cout << "Create thread " << this->process_number << " " << this->number_of_messages << endl;
         if (i+1 != this->process_number){
-            thread_data td{this->ports[i], this->ips[i], this->number_of_messages};
-            pthread_create(&senders[i], NULL, reinterpret_cast<void *(*)(void *)>(run_sender), (void *)&td);
+            cout << this->ports[i] << endl;
+            thread_data td{ this->number_of_messages, this->ips[i],this->ports[i]};
+            pthread_create(&senders[i], NULL, run_sender, (void *)&td);
         }
     }
 
