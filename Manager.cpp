@@ -47,13 +47,14 @@ void run_receiver(string ip_address, int port){
     }
 
     while(true){
+        cout << "Waiting for message" << endl;
         unsigned int len;
         char buf[1024];
         struct sockaddr_in sender_addr;
         int n = recvfrom(sockfd, (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
                          &len);
         buf[n] = '\0';
-        cout << buf << endl;
+        cout << "received " << buf << endl;
         //unique_lock<mutex> lck(mtx);
         //cv_queue.wait(lck, [&]{ return !queue_locked; });
         //queue_locked = true;
