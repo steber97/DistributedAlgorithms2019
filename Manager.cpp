@@ -41,7 +41,6 @@ struct thread_data{
 void run_receiver(char* receiver_addr, int s_port){
     int sockfd;
     struct sockaddr_in recv_addr, sender_addr;
-
     // Creating socket file descriptor
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         cerr << "socket creation failed";
@@ -51,8 +50,7 @@ void run_receiver(char* receiver_addr, int s_port){
     recv_addr.sin_family = AF_INET; // IPv4
     inet_pton(AF_INET, receiver_addr, &(recv_addr.sin_addr));
     //this->servaddr.sin_addr = INADDR_ANY;
-    recv_addr.sin_port = htons(s_port);
-
+    recv_addr.sin_port = s_port;
     if ( bind(sockfd, (const struct sockaddr *)&(recv_addr),
               sizeof(recv_addr)) < 0 ) {
         perror("bind failed");
@@ -64,7 +62,7 @@ void run_receiver(char* receiver_addr, int s_port){
     while(true){
         unsigned int len;
         char buf[1024];
-        cout << "Receiver waiting for incoming messages" << endl;
+        cout << "Receiver waiting for incoming messages on port" << recv_addr.sin_port << endl;
         int n = recvfrom(sockfd, (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
                          &len);
         buf[n] = '\0';
@@ -74,8 +72,8 @@ void run_receiver(char* receiver_addr, int s_port){
         unique_lock<mutex> lck(mtx);
         cv_queue.wait(lck, [&]{ return !queue_locked; });
         queue_locked = true;
-        cout << "Ciao" << endl;
-
+        cout << "Message received :)" << endl;
+        sleep(10);
         queue_receiver_master.push(m);
         queue_locked = false;
         cv_queue.notify_one();
@@ -105,13 +103,11 @@ void* run_sender(void *threadarg){
         cerr << "socket creation failed";
         exit(EXIT_FAILURE);
     }
-    cout << "ciao" << endl;
     memset(&d_addr, 0, sizeof(d_addr));
     cout << "ciao " << d_port << " " << destination_addr << " " << total_number_of_messages << endl;
     d_addr.sin_family = AF_INET;
-    d_addr.sin_port = htonl(d_port);
+    d_addr.sin_port = d_port;
     // wrong line here
-    cout << destination_addr << endl;
     inet_pton(AF_INET, destination_addr, &(d_addr.sin_addr));
 
     while(last_ack <= total_number_of_messages){
@@ -120,7 +116,6 @@ void* run_sender(void *threadarg){
         sendto(sockfd, msg, strlen(msg),
                MSG_CONFIRM, (const struct sockaddr *) &d_addr,
                sizeof(d_addr));
-
     }
 
 
@@ -142,6 +137,8 @@ void Manager::run(){
      * invokes receiver and sender runs with threads.
      */
 
+    cout << "process number " << this->process_number << endl;
+    cout << "Before the mess happens with the threads " << this->ports[this->process_number-1] << endl;
     thread t_rec(run_receiver, this->ips[this->process_number-1], this->ports[this->process_number-1]);
     pthread_t senders[this->processes.size()];
     void *status;
