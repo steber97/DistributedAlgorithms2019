@@ -4,7 +4,6 @@
 #include <time.h>
 #include <thread>
 #include <iostream>
-
 #include "Manager.h"
 #include "utilities.h"
 

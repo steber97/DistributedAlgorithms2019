@@ -236,9 +236,7 @@ void send_port_number(int sockfd, sockaddr_in d_addr, int process_id) {
      */
     cout << "send port number" << endl;
     char msg[1024] = "init\0";
-    const char * id_process_char = int_to_char_pointer(process_id);
-
-    cout << "process id " << msg << "\t" << id_process_char << " "<< strlen(id_process_char) << endl;
+    const char *id_process_char(int_to_char_pointer(process_id));
     strcat(msg, id_process_char);
     cout << "Message " << msg << endl;
     sendto(sockfd, msg, strlen(msg),
