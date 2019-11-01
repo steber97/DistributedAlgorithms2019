@@ -3,15 +3,21 @@
 #include <signal.h>
 #include <time.h>
 #include <thread>
+#include <iostream>
 
 #include "Manager.h"
 #include "utilities.h"
 
+using namespace std;
 
 static int wait_for_start = 1;
+bool initialization_phase = true;
 
 static void start(int signum) {
+    cout << signum << " received" << endl;
 	wait_for_start = 0;
+
+    initialization_phase = false;
 }
 
 static void stop(int signum) {
@@ -42,11 +48,13 @@ int main(int argc, char** argv) {
 	//start listening for incoming UDP packets
 	printf("Initializing.\n");
 
+	cout << "The process id is " << ::getpid() << endl;
+
 
 	// Here we must initialize everything!
     Manager* manager = parse_input_data(argc, argv);
 
-    manager->run();
+
 
 
     //wait until start signal
@@ -63,6 +71,9 @@ int main(int argc, char** argv) {
 
 
 	//wait until stopped
+
+    manager->run();
+
 	while(1) {
 		struct timespec sleep_time;
 		sleep_time.tv_sec = 1;

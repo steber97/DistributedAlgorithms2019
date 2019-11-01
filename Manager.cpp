@@ -2,12 +2,6 @@
 // Created by stefano on 31/10/19.
 //
 
-#include <iostream>
-#include <pthread.h>
-#include <thread>
-#include <queue>
-#include <mutex>
-#include <condition_variable>
 
 #include "Manager.h"
 
@@ -30,12 +24,22 @@ condition_variable cv_queue;
 queue<message> queue_receiver_master;
 
 
+// This is a queue shared by the manager and every sender.
+// it tells the sender whether it has to send some ack along with the standard message.
+vector<condition_variable> ack_cv;
+vector<queue<int>> ack_queue;
+
+// this is the mutex to access the initialization phase variable
+mutex mtx_initialization_phase;
+
 struct thread_data{
     int total_number_of_messages;
     const char* destination_addr;
     int d_port;
-    thread_data(int total_number_of_messages, char* destination_addr, int d_port ):
-        total_number_of_messages{total_number_of_messages}, destination_addr {destination_addr}, d_port {d_port} {};
+    int process_number;
+    thread_data(int total_number_of_messages, const char* destination_addr, int d_port, int process_number ):
+        total_number_of_messages{total_number_of_messages}, destination_addr {destination_addr},
+        d_port {d_port}, process_number {process_number} {};
 };
 
 void run_receiver(char* receiver_addr, int s_port){
@@ -62,21 +66,22 @@ void run_receiver(char* receiver_addr, int s_port){
     while(true){
         unsigned int len;
         char buf[1024];
-        cout << "Receiver waiting for incoming messages on port" << recv_addr.sin_port << endl;
         int n = recvfrom(sockfd, (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
                          &len);
         buf[n] = '\0';
 
         message m{buf, sender_addr};
 
+        cout << "Message received from port " << sender_addr.sin_port << endl;
+
         unique_lock<mutex> lck(mtx);
         cv_queue.wait(lck, [&]{ return !queue_locked; });
         queue_locked = true;
         cout << "Message received :)" << endl;
-        sleep(10);
         queue_receiver_master.push(m);
         queue_locked = false;
         cv_queue.notify_one();
+        sleep(10);
     }
 
 }
@@ -104,11 +109,26 @@ void* run_sender(void *threadarg){
         exit(EXIT_FAILURE);
     }
     memset(&d_addr, 0, sizeof(d_addr));
-    cout << "ciao " << d_port << " " << destination_addr << " " << total_number_of_messages << endl;
     d_addr.sin_family = AF_INET;
     d_addr.sin_port = d_port;
     // wrong line here
     inet_pton(AF_INET, destination_addr, &(d_addr.sin_addr));
+
+    while(true){
+         mtx_initialization_phase.lock();
+         // in this critical section we check if the initialization has finished.
+        if (!initialization_phase){
+            // the initialization phase is finished, now we can start sending proper messages
+            mtx_initialization_phase.unlock();
+            break;
+        }
+        mtx_initialization_phase.unlock();
+
+        //send_port_number(sockfd, d_addr, )
+        usleep(100);
+    }
+
+    cout << "Sender now starts sending messages" << endl;
 
     while(last_ack <= total_number_of_messages){
         string message = "0" + to_string(last_sent);
@@ -116,6 +136,7 @@ void* run_sender(void *threadarg){
         sendto(sockfd, msg, strlen(msg),
                MSG_CONFIRM, (const struct sockaddr *) &d_addr,
                sizeof(d_addr));
+        sleep(10);   // Sleep for a while, to allow easy debugging!
     }
 
 
@@ -146,17 +167,15 @@ void Manager::run(){
     vector<thread_data> td;
 
     for (int i = 0; i<this->processes.size(); i++){
-        cout << "Create thread " << this->process_number << " " << this->number_of_messages << endl;
         if (i+1 != this->process_number){
-            cout << this->ports[i] << endl;
-            thread_data temp{ this->number_of_messages, this->ips[i],this->ports[i]};
+            thread_data temp{ this->number_of_messages, this->ips[i],this->ports[i], i+1};
             td.push_back(temp);
             //td[i] = temp;
             pthread_create(&senders[i], NULL, run_sender, (void *)&td[i]);
         }
         else{
             // the process itself.
-            td.push_back({ this->number_of_messages, this->ips[i],this->ports[i]});
+            td.push_back({ this->number_of_messages, this->ips[i], this->ports[i], i+1});
         }
     }
 
@@ -170,6 +189,9 @@ void Manager::run(){
         cout << m.content << endl;
         queue_locked = false;
         cv_queue.notify_one();
+
+        // now we are sure to have received a message.
+
     }
 
     t_rec.join();

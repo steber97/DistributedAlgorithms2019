@@ -13,10 +13,23 @@
 #include <netinet/in.h>
 #include <vector>
 #include <queue>
-
+#include <unordered_map>
+#include <mutex>
+#include <iostream>
+#include <pthread.h>
+#include <thread>
+#include <condition_variable>
 
 
 using namespace std;
+
+// This is set to true at the beginning of the program.
+// As soon as we receive the signal to start the program, then we can set it to false
+// and all processes can start sending proper messages instead of initialization messages.
+// the access to this variable is protected by a mutex
+
+extern mutex mtx_initialization_phase;
+extern bool initialization_phase;
 
 class Manager {
     vector<int> ports;
@@ -24,6 +37,9 @@ class Manager {
     vector<int> processes;
     int process_number;
     int number_of_messages;
+    unordered_map<int,int> port_id;
+
+
 public:
     Manager(vector<int> &ports, vector<char *> &ips, vector<int> &processes, int process_number,
             int number_of_messages);        // Constructor
