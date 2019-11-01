@@ -4,40 +4,82 @@
 
 #include <iostream>
 #include <pthread.h>
+#include <thread>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
 
 #include "Manager.h"
+
+
+#define MAXLINE 1024
+
 using namespace std;
+
+struct message{
+    string content;
+    struct sockaddr_in addr;
+    message(string content, struct sockaddr_in addr) : content{content}, addr{addr} {};
+};
+
+bool queue_locked = false;
+
+mutex mtx;
+
+condition_variable cv_queue;
+queue<message> queue_receiver_master;
 
 
 struct thread_data{
     int total_number_of_messages;
     const char* destination_addr;
     int d_port;
+    thread_data(int total_number_of_messages, char* destination_addr, int d_port ):
+        total_number_of_messages{total_number_of_messages}, destination_addr {destination_addr}, d_port {d_port} {};
 };
 
 void run_receiver(char* receiver_addr, int s_port){
     int sockfd;
-    struct sockaddr_in s_addr, d_addr;
+    struct sockaddr_in recv_addr, sender_addr;
 
     // Creating socket file descriptor
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         cerr << "socket creation failed";
         exit(EXIT_FAILURE);
     }
-    memset(&(s_addr), 0, sizeof(s_addr));
-    s_addr.sin_family = AF_INET; // IPv4
-    inet_pton(AF_INET, receiver_addr, &(s_addr.sin_addr));
+    memset(&(recv_addr), 0, sizeof(recv_addr));
+    recv_addr.sin_family = AF_INET; // IPv4
+    inet_pton(AF_INET, receiver_addr, &(recv_addr.sin_addr));
     //this->servaddr.sin_addr = INADDR_ANY;
-    s_addr.sin_port = htons(s_port);
+    recv_addr.sin_port = htons(s_port);
 
-    if ( bind(sockfd, (const struct sockaddr *)&(s_addr),
-              sizeof(s_addr)) < 0 ) {
+    if ( bind(sockfd, (const struct sockaddr *)&(recv_addr),
+              sizeof(recv_addr)) < 0 ) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
 
 
     // TODO: while loop and receive messages
+    while(true){
+        unsigned int len;
+        char buf[1024];
+        cout << "Receiver waiting for incoming messages" << endl;
+        int n = recvfrom(sockfd, (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
+                         &len);
+        buf[n] = '\0';
+
+        message m{buf, sender_addr};
+
+        unique_lock<mutex> lck(mtx);
+        cv_queue.wait(lck, [&]{ return !queue_locked; });
+        queue_locked = true;
+        cout << "Ciao" << endl;
+
+        queue_receiver_master.push(m);
+        queue_locked = false;
+        cv_queue.notify_one();
+    }
 
 }
 
@@ -58,7 +100,7 @@ void run_sender(int total_number_of_messages, const char* destination_addr, int 
     d_addr.sin_addr.s_addr = INADDR_ANY;
     d_addr.sin_port = htons(d_port);
 
-    
+
 
 }
 
@@ -85,12 +127,21 @@ void Manager::run(){
     for (int i = 0; i<this->processes.size(); i++){
         cout << "Create thread" << endl;
         if (i+1 != this->process_number){
-            thread_data td;
-            td.d_port = this->ports[i];
-            td.destination_addr = this->ips[i];
-            td.total_number_of_messages = this->number_of_messages;
+            thread_data td{this->ports[i], this->ips[i], this->number_of_messages};
             pthread_create(&senders[i], NULL, reinterpret_cast<void *(*)(void *)>(run_sender), (void *)&td);
         }
+    }
+
+    while(true){
+        // Waiting for the queue from the receiver to be filled.
+        unique_lock<mutex> lck(mtx);
+        cv_queue.wait(lck, [&]{return !queue_receiver_master.empty(); });
+        queue_locked = true;
+        message m = queue_receiver_master.front();
+        queue_receiver_master.pop();
+        cout << m.content << endl;
+        queue_locked = false;
+        cv_queue.notify_one();
     }
 
     t_rec.join();
