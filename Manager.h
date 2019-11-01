@@ -37,13 +37,13 @@ class Manager {
     vector<int> processes;
     int process_number;
     int number_of_messages;
-    unordered_map<int,int> port_id;
 
 
 public:
     Manager(vector<int> &ports, vector<char *> &ips, vector<int> &processes, int process_number,
             int number_of_messages);        // Constructor
 
+    unordered_map<int,int> port_id;
 
     void run();
 };

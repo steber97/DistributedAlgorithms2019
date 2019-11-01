@@ -18,6 +18,9 @@ static void start(int signum) {
 	wait_for_start = 0;
 
     initialization_phase = false;
+
+    // print the port-processid mapping
+
 }
 
 static void stop(int signum) {
@@ -54,8 +57,7 @@ int main(int argc, char** argv) {
 	// Here we must initialize everything!
     Manager* manager = parse_input_data(argc, argv);
 
-
-
+    manager->run();
 
     //wait until start signal
 	while(wait_for_start) {
@@ -65,6 +67,9 @@ int main(int argc, char** argv) {
 		nanosleep(&sleep_time, NULL);
 	}
 
+	for (auto el:manager->port_id){
+	    cout << "port " << el.first << "\tprocess id: " << el.second << endl;
+	}
 
 	//broadcast messages
 	printf("Broadcasting messages.\n");
@@ -72,9 +77,8 @@ int main(int argc, char** argv) {
 
 	//wait until stopped
 
-    manager->run();
 
-	while(1) {
+    while(1) {
 		struct timespec sleep_time;
 		sleep_time.tv_sec = 1;
 		sleep_time.tv_nsec = 0;

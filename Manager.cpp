@@ -4,6 +4,8 @@
 
 
 #include "Manager.h"
+#include "utilities.h"
+#include "settings.h"
 
 
 #define MAXLINE 1024
@@ -42,7 +44,20 @@ struct thread_data{
         d_port {d_port}, process_number {process_number} {};
 };
 
-void run_receiver(char* receiver_addr, int s_port){
+/**
+ * This sends the process id, so that receivers can understand
+ * which port the sender will use during the broadcast phase.
+ * Can be only executed during the initialization phase.
+ * @param sockfd
+ * @param in
+ * @param process_id
+ */
+void send_port_number(int sockfd, sockaddr_in in, int process_id);
+
+void receive_and_cast_init_message(int sockfd, Manager *pManager);
+
+void run_receiver(char* receiver_addr, int s_port, Manager* manager){
+
     int sockfd;
     struct sockaddr_in recv_addr, sender_addr;
     // Creating socket file descriptor
@@ -59,6 +74,25 @@ void run_receiver(char* receiver_addr, int s_port){
               sizeof(recv_addr)) < 0 ) {
         perror("bind failed");
         exit(EXIT_FAILURE);
+    }
+    while(true){}
+
+/*
+    //###############################################################
+    // RUN THE INITIALIZATION PHASE
+    //###############################################################
+    while(true){
+        mtx_initialization_phase.lock();
+        // in this critical section we check if the initialization has finished.
+        if (!initialization_phase){
+            // the initialization phase is finished, now we can start sending proper messages
+            mtx_initialization_phase.unlock();
+            break;
+        }
+        mtx_initialization_phase.unlock();
+
+        receive_and_cast_init_message(sockfd, manager);
+        usleep(100);
     }
 
 
@@ -83,17 +117,58 @@ void run_receiver(char* receiver_addr, int s_port){
         cv_queue.notify_one();
         sleep(10);
     }
+*/
+}
+
+void receive_and_cast_init_message(int sockfd, Manager *pManager) {
+    /**
+     * This method gets any message sent by other senders during the initialization,
+     * and sets the unordered map in manager with maps among the ports of the sender processes
+     * and the processes ids.
+     *
+     * This process accesses the manager instance. It doesn't need any lock, as the receiver thread is
+     * the only one who can access the manager instance.
+     */
+
+    cout << "Waiting to receive init message" << endl;
+    unsigned int len;
+    char buf[1024];
+    struct sockaddr_in sender_addr;
+
+    int n = recvfrom(sockfd, (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
+                     &len);
+    buf[n] = '/0';
+
+    cout << buf << endl;
+    // check if the message received is an init;
+    string message_str (buf);
+    if (message_str.substr(0,SIZE_OF_INIT).compare("init") == 0){
+        // Ok it is an init message
+        string process_id_str = message_str.substr(SIZE_OF_INIT);
+        int process_id  = stoi(process_id_str);
+        if (pManager->port_id.find(sender_addr.sin_port) == pManager->port_id.end()){
+            // if we have no process id related to the port, then update it.
+            pManager->port_id[sender_addr.sin_port] = process_id;
+        }
+        else if (pManager->port_id[sender_addr.sin_port] != process_id){
+            // Some error has happened! Fuuuck
+            cerr << "Fuuck, some error has happened! " << process_id << "\t" << sender_addr.sin_port << endl;
+        }
+    }
 
 }
 
 
 void* run_sender(void *threadarg){
+
+
     struct thread_data *my_data;
     my_data = (struct thread_data *) threadarg;
     cout << "Create a new sender on port " << my_data->d_port << endl;
     int d_port = my_data->d_port;
     int total_number_of_messages = my_data->total_number_of_messages;
     const char* destination_addr = my_data->destination_addr;
+    int process_id = my_data->process_number;
 
     struct sockaddr_in d_addr;
     int last_ack = 0;
@@ -114,6 +189,11 @@ void* run_sender(void *threadarg){
     // wrong line here
     inet_pton(AF_INET, destination_addr, &(d_addr.sin_addr));
 
+
+
+    //###############################################################
+    // RUN THE INITIALIZATION PHASE
+    //###############################################################
     while(true){
          mtx_initialization_phase.lock();
          // in this critical section we check if the initialization has finished.
@@ -124,12 +204,16 @@ void* run_sender(void *threadarg){
         }
         mtx_initialization_phase.unlock();
 
-        //send_port_number(sockfd, d_addr, )
+
+        send_port_number(sockfd, d_addr, process_id);
+        while(true){}
         usleep(100);
     }
-
     cout << "Sender now starts sending messages" << endl;
 
+    //###############################################################
+    // RUN THE BROADCAST PHASE
+    //###############################################################
     while(last_ack <= total_number_of_messages){
         string message = "0" + to_string(last_sent);
         const char* msg = message.c_str();
@@ -140,6 +224,26 @@ void* run_sender(void *threadarg){
     }
 
 
+}
+
+void send_port_number(int sockfd, sockaddr_in d_addr, int process_id) {
+    /**
+     * The initialization message contain:
+     * - init keyword (otherwise we could mis-classify some of the true messages as initialization one)
+     * - process id
+     *
+     * The port of the message is automatically inferred by the receiver.
+     */
+    cout << "send port number" << endl;
+    char msg[1024] = "init\0";
+    const char * id_process_char = int_to_char_pointer(process_id);
+    cout << "process id " << id_process_char << " "<< strlen(id_process_char) << endl;
+    strcat(msg, id_process_char);
+    cout << "Message " << msg    << endl;
+    sendto(sockfd, msg, strlen(msg),
+           MSG_CONFIRM, (const struct sockaddr *) &d_addr,
+           sizeof(d_addr));
+    usleep(100);
 }
 
 Manager::Manager(vector<int> &ports, vector<char *> &ips, vector<int> &processes, int process_number, int number_of_messages){
@@ -160,7 +264,7 @@ void Manager::run(){
 
     cout << "process number " << this->process_number << endl;
     cout << "Before the mess happens with the threads " << this->ports[this->process_number-1] << endl;
-    thread t_rec(run_receiver, this->ips[this->process_number-1], this->ports[this->process_number-1]);
+    thread t_rec(run_receiver, this->ips[this->process_number-1], this->ports[this->process_number-1], this);
     pthread_t senders[this->processes.size()];
     void *status;
 

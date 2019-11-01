@@ -14,6 +14,13 @@
 
 using namespace std;
 
+const char* int_to_char_pointer(int n){
+    string temp = to_string(n);
+    const char* res = temp.c_str();
+    cout << "the number to integer is " << res << endl;
+    return res;
+}
+
 Manager* parse_input_data(int argc, char** argv){
     /**
      * Parse command line arguments, and for every process it spawns N different threads:
