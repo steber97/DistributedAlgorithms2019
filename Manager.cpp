@@ -91,15 +91,28 @@ void run_sender(int total_number_of_messages, const char* destination_addr, int 
     int last_ack = 0;
 
     // Messages start from 1. We always send the next message to send (last_send + 1)
-    int last_sent = 0;
+    int last_sent = 1;
 
     // Create a socket
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    int sockfd;
+    // Creating socket file descriptor
+    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        cerr << "socket creation failed";
+        exit(EXIT_FAILURE);
+    }
     memset(&d_addr, 0, sizeof(d_addr));
     d_addr.sin_family = AF_INET;
-    d_addr.sin_addr.s_addr = INADDR_ANY;
     d_addr.sin_port = htons(d_port);
+    // inet_pton(AF_INET, destination_addr, &(d_addr.sin_addr));
 
+    while(last_ack <= total_number_of_messages){
+        string message = "0" + to_string(last_sent);
+        const char* msg = message.c_str();
+        sendto(sockfd, msg, strlen(msg),
+               MSG_CONFIRM, (const struct sockaddr *) &d_addr,
+               sizeof(d_addr));
+
+    }
 
 
 }
