@@ -26,7 +26,7 @@ Manager* parse_input_data(int argc, char** argv){
      *      when acks are received (so that stop and wait can be resumed).
      */
 
-    cout << "parsing input data" << endl;
+    unordered_map<int, pair<string, int>> *socket_by_process_id = new(unordered_map<int, pair<string, int>>);
 
     if (argc != 3){
         // wrong number of arguments
@@ -42,28 +42,23 @@ Manager* parse_input_data(int argc, char** argv){
     int number_of_processes ;
     mem_in >> number_of_processes;
     // one of them will remain empty.
-    vector<int> ports(number_of_processes);
-    vector<char*> ips(number_of_processes);
-    vector<int> processes(number_of_processes);
-    int s_port ;
     char* addr;
+    int process_id;
+    string ip;
+    int port;
     for (int i = 0; i<number_of_processes; i++){
-
-        mem_in >> processes[i];
-        ips[i] = new char[10];
-        mem_in >> ips[i] ;
-        mem_in >> ports[i];
-        cout << processes[i] << " " << ips[i] << " " << ports[i] << " " << endl;
-        if (i+1 == process_number){
-            s_port = ports[i];
-            addr = ips[i];
-        }
+        mem_in >> process_id;
+        mem_in >> ip;
+        mem_in >> port;
+        (*socket_by_process_id)[process_id] = {ip, port};
     }
 
     int number_of_messages;
     mem_in >> number_of_messages;
-    cout << "number of messages " << number_of_messages << endl;
 
-    Manager* m = new Manager(ports, ips, processes, process_number, number_of_messages);
-    return m;
+    for (auto el: *socket_by_process_id){
+        cout << el.first << " " << el.second.first << " " << el.second.second << endl;
+    }
+
+    return new Manager(process_number, *socket_by_process_id);
 }

@@ -13,15 +13,7 @@ static int wait_for_start = 1;
 bool initialization_phase = true;
 
 static void start(int signum) {
-    cout << signum << " received" << endl;
 	wait_for_start = 0;
-
-    mtx_initialization_phase.lock();
-    initialization_phase = false;
-    mtx_initialization_phase.unlock();
-
-    // print the port-processid mapping
-
 }
 
 static void stop(int signum) {
@@ -46,19 +38,14 @@ int main(int argc, char** argv) {
 	signal(SIGTERM, stop);
 	signal(SIGINT, stop);
 
+    cout << "The process id is " << ::getpid() << endl;
 
 	//parse arguments, including membership
 	//initialize application
 	//start listening for incoming UDP packets
-	printf("Initializing.\n");
 
-	cout << "The process id is " << ::getpid() << endl;
+	Manager *manager = parse_input_data(argc, argv);
 
-
-	// Here we must initialize everything!
-    Manager* manager = parse_input_data(argc, argv);
-
-    manager->run();
 
     //wait until start signal
 	while(wait_for_start) {
@@ -67,6 +54,11 @@ int main(int argc, char** argv) {
 		sleep_time.tv_nsec = 1000;
 		nanosleep(&sleep_time, NULL);
 	}
+
+	cout << "init" << endl;
+	manager->init();
+
+	/*
 
 	for (auto el:manager->port_id){
 	    cout << "port " << el.first << "\tprocess id: " << el.second << endl;
@@ -85,4 +77,5 @@ int main(int argc, char** argv) {
 		sleep_time.tv_nsec = 0;
 		nanosleep(&sleep_time, NULL);
 	}
+     */
 }

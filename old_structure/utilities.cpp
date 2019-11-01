@@ -41,7 +41,6 @@ Manager* parse_input_data(int argc, char** argv){
 
     int number_of_processes ;
     mem_in >> number_of_processes;
-    cout << "The number of processes is " << number_of_processes << endl;
     // one of them will remain empty.
     vector<int> ports(number_of_processes);
     vector<char*> ips(number_of_processes);
