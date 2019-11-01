@@ -75,9 +75,8 @@ void run_receiver(char* receiver_addr, int s_port, Manager* manager){
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
-    while(true){}
 
-/*
+
     //###############################################################
     // RUN THE INITIALIZATION PHASE
     //###############################################################
@@ -117,7 +116,7 @@ void run_receiver(char* receiver_addr, int s_port, Manager* manager){
         cv_queue.notify_one();
         sleep(10);
     }
-*/
+
 }
 
 void receive_and_cast_init_message(int sockfd, Manager *pManager) {
@@ -234,11 +233,9 @@ void send_port_number(int sockfd, sockaddr_in d_addr, int process_id) {
      *
      * The port of the message is automatically inferred by the receiver.
      */
-    cout << "send port number" << endl;
-    char msg[1024] = "init\0";
-    const char *id_process_char(int_to_char_pointer(process_id));
+    char msg[1024] = "init";
+    const char * id_process_char(int_to_char_pointer(process_id));
     strcat(msg, id_process_char);
-    cout << "Message " << msg << endl;
     sendto(sockfd, msg, strlen(msg),
            MSG_CONFIRM, (const struct sockaddr *) &d_addr,
            sizeof(d_addr));

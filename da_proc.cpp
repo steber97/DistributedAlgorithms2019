@@ -16,7 +16,9 @@ static void start(int signum) {
     cout << signum << " received" << endl;
 	wait_for_start = 0;
 
+    mtx_initialization_phase.lock();
     initialization_phase = false;
+    mtx_initialization_phase.unlock();
 
     // print the port-processid mapping
 

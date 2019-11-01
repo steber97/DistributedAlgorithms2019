@@ -35,9 +35,9 @@ class Manager {
     vector<int> ports;
     vector<char*> ips;
     vector<int> processes;
+    vector<int> sockfd;
     int process_number;
     int number_of_messages;
-
 
 public:
     Manager(vector<int> &ports, vector<char *> &ips, vector<int> &processes, int process_number,
