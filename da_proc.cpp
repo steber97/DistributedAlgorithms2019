@@ -58,6 +58,8 @@ int main(int argc, char** argv) {
 	cout << "init" << endl;
 	manager->init();
 
+
+
 	/*
 
 	for (auto el:manager->port_id){

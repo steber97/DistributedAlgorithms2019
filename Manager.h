@@ -25,10 +25,11 @@
 #include <condition_variable>
 
 #define MAXLINE 1024
+#define RTT
 
 using namespace std;
 
-void send_to(int process_id, string msg);
+void send_to(int process_id, string msg, unordered_map<int, pair<string, int>> &socket_by_process_id);
 void run_receiver(string ip_address, int port);
 
 class Manager {
