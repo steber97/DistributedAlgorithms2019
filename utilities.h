@@ -2,16 +2,14 @@
 #ifndef PROJECT_TEMPLATE_UTILITIES_H
 #define PROJECT_TEMPLATE_UTILITIES_H
 
-#include "Manager.h"
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include "Link.h"
 
-/**
- * this function returns a string (const char*) out of an int
- * @param n: any integer value (I guess only positive ones).
- * @return
- */
-const char* int_to_char_pointer(int n);
-
-Manager* parse_input_data(int argc, char** argv);
+unordered_map<int, pair<string, int>>* parse_input_data(string &membership_file);
+bool is_ack(string msg);
+void ack_received(string msg);
 
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 

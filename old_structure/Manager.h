@@ -31,7 +31,7 @@ using namespace std;
 extern mutex mtx_initialization_phase;
 extern bool initialization_phase;
 
-class Manager {
+class Link {
     vector<int> ports;
     vector<char*> ips;
     vector<int> processes;
@@ -40,8 +40,8 @@ class Manager {
     int number_of_messages;
 
 public:
-    Manager(vector<int> &ports, vector<char *> &ips, vector<int> &processes, int process_number,
-            int number_of_messages);        // Constructor
+    Link(vector<int> &ports, vector<char *> &ips, vector<int> &processes, int process_number,
+         int number_of_messages);        // Constructor
 
     unordered_map<int,int> port_id;
 

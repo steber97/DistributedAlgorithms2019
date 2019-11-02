@@ -1,48 +1,57 @@
-//
-// Created by stefano on 01/11/19.
-//
+#include "Link.h"
+#include "utilities.h"
 
-#include "Manager.h"
-
+//to handle concurrency on the incoming_messages queue between the manager of the link and the receiver
 bool queue_locked = false;
 mutex mtx_receiver;
-
-condition_variable cv_queue;
+condition_variable cv_receiver;
 queue<string> incoming_messages;
 
-condition_variable cv;
+//to handle concurrency on the acks between the manager of the link and the sender
+vector<vector<bool>> acks;
 mutex mtx_sender;
-bool ack;
+condition_variable cv_sender;
 
 
-Manager::Manager(int process_number, unordered_map<int, pair<string, int>> &socket_by_process_id) {
+Link::Link(int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id) {
     this->process_number = process_number;
-    this->socket_by_process_id = socket_by_process_id;
+    this->socket_by_process_id = *socket_by_process_id;
 }
 
-void Manager::init(){
+
+void Link::init(){
     thread t_rec(run_receiver, this->socket_by_process_id[this->process_number].first,
             this->socket_by_process_id[this->process_number].second);
+    t_rec.detach();
+}
 
 
-    while (true) {
+void Link::send_to(int d_process_number, string &msg){
+    thread t_rec(run_sender, msg, this->socket_by_process_id[d_process_number].first,
+            this->socket_by_process_id[d_process_number].second);
+    t_rec.detach();
+}
+
+
+string Link::get_next_message(){
+    while(true){
         unique_lock<mutex> lck(mtx_receiver);
-        cv.wait(lck, [&] { return !incoming_messages.empty(); });
+        cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
         queue_locked = true;
         string message = incoming_messages.front();
         incoming_messages.pop();
         queue_locked = false;
-        cv.notify_one();
-
-        cout << message << endl;
+        cv_receiver.notify_one();
+        if(is_ack(message))
+            ack_received(message);
+        else
+            return message;
     }
-    t_rec.join();
 }
 
-void send_to(int process_id, string msg, unordered_map<int, pair<string, int>> &socket_by_process_id){
 
+void run_sender(string &msg, string &ip_address, int port){
     struct sockaddr_in d_addr;
-
     // Create a socket
     int sockfd;
     // Creating socket file descriptor
@@ -52,28 +61,23 @@ void send_to(int process_id, string msg, unordered_map<int, pair<string, int>> &
     }
     memset(&d_addr, 0, sizeof(d_addr));
     d_addr.sin_family = AF_INET;
-    d_addr.sin_port = socket_by_process_id[process_id].second;
+    d_addr.sin_port = port;
     // wrong line here
-    inet_pton(AF_INET, socket_by_process_id[process_id].first.c_str(), &(d_addr.sin_addr));
-
+    inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
     unique_lock<mutex> lck(mtx_sender);
 
-    //TODO da rivedere
-    lck.lock();
-    while(!ack){
-        lck.unlock();
+    //TODO attenzione alla concorrenza
+    while(/*ack not received*/){
         const char* message = msg.c_str();
         sendto(sockfd, message, strlen(message),
                MSG_CONFIRM, (const struct sockaddr *) &d_addr,
                sizeof(d_addr));
-
-        cv.wait_for(lck, chrono::milliseconds(10));
-        lck.lock();
-
+        cv_sender.wait_for(lck, chrono::milliseconds(10), [&]{ return acks[/*right ack*/]});
     }
 }
 
-void run_receiver(string ip_address, int port){
+
+void run_receiver(string &ip_address, int port){
     /**
      * Creates a socket to receive incoming messages
      */
@@ -93,7 +97,6 @@ void run_receiver(string ip_address, int port){
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
-
     while(true){
         cout << "Waiting for message" << endl;
         unsigned int len;
@@ -103,13 +106,12 @@ void run_receiver(string ip_address, int port){
                          &len);
         buf[n] = '\0';
         cout << "received " << buf << endl;
-
         unique_lock<mutex> lck(mtx_receiver);
-        cv.wait(lck, [&]{ return !queue_locked; });
+        cv_receiver.wait(lck, [&]{ return !queue_locked; });
         queue_locked = true;
         incoming_messages.push(buf);
         queue_locked = false;
-        cv.notify_one();
+        cv_receiver.notify_one();
     }
 }
 

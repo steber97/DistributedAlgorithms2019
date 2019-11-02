@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
 
 
 	// Here we must initialize everything!
-    Manager* manager = parse_input_data(argc, argv);
+    Link* manager = parse_input_data(argc, argv);
 
     manager->run();
 

@@ -1,7 +1,3 @@
-//
-// Created by stefano on 01/11/19.
-//
-
 #ifndef DISTRIBUTEDALGORITHMS2019_MANAGER_H
 #define DISTRIBUTEDALGORITHMS2019_MANAGER_H
 
@@ -25,21 +21,21 @@
 #include <condition_variable>
 
 #define MAXLINE 1024
-#define RTT
 
 using namespace std;
 
-void send_to(int process_id, string msg, unordered_map<int, pair<string, int>> &socket_by_process_id);
-void run_receiver(string ip_address, int port);
+void run_receiver(string &ip_address, int port);
+void run_sender(string &msg, string &ip_address, int port);
 
-class Manager {
+class Link {
 private:
     int process_number;
     unordered_map<int, pair<string, int>> socket_by_process_id;
 public:
-    Manager(int process_number, unordered_map<int, pair<string, int>> &socket_by_process_id);
+    Link(int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id);
     void init();
-
+    string get_next_message();
+    void send_to(int d_process_number, string &msg);
 };
 
 

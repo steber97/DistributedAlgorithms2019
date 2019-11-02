@@ -17,7 +17,7 @@ const char* int_to_char_pointer(int n){
     return res;
 }
 
-Manager* parse_input_data(int argc, char** argv){
+Link* parse_input_data(int argc, char** argv){
     /**
      * Parse command line arguments, and for every process it spawns N different threads:
      * - N-1 to send packets to the N-1 other processes.
@@ -64,6 +64,6 @@ Manager* parse_input_data(int argc, char** argv){
     mem_in >> number_of_messages;
     cout << "number of messages " << number_of_messages << endl;
 
-    Manager* m = new Manager(ports, ips, processes, process_number, number_of_messages);
+    Link* m = new Link(ports, ips, processes, process_number, number_of_messages);
     return m;
 }

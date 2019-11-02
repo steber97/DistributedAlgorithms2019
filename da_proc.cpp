@@ -4,7 +4,7 @@
 #include <time.h>
 #include <thread>
 #include <iostream>
-#include "Manager.h"
+#include "Link.h"
 #include "utilities.h"
 
 using namespace std;
@@ -33,10 +33,18 @@ static void stop(int signum) {
 
 int main(int argc, char** argv) {
 
-	//set signal handlers
-	signal(SIGUSR2, start);
-	signal(SIGTERM, stop);
-	signal(SIGINT, stop);
+    if (argc != 3){
+        // wrong number of arguments
+        cout << "Wrong arguments number!!" << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    //set signal handlers
+    signal(SIGUSR2, start);
+    signal(SIGTERM, stop);
+    signal(SIGINT, stop);
+
+    int process_number = atoi(argv[1]);
 
     cout << "The process id is " << ::getpid() << endl;
 
@@ -44,7 +52,9 @@ int main(int argc, char** argv) {
 	//initialize application
 	//start listening for incoming UDP packets
 
-	Manager *manager = parse_input_data(argc, argv);
+	string membership_file = argv[2];
+
+	Link manager(process_number, parse_input_data(membership_file));
 
 
     //wait until start signal
@@ -56,7 +66,10 @@ int main(int argc, char** argv) {
 	}
 
 	cout << "init" << endl;
-	manager->init();
+
+	manager.init();
+
+    cout << "detached" << endl;
 
 
 

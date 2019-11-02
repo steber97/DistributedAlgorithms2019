@@ -22,7 +22,7 @@ bool queue_locked = false;
 
 mutex mtx;
 
-condition_variable cv_queue;
+condition_variable cv_receiver;
 queue<message> queue_receiver_master;
 
 
@@ -54,9 +54,9 @@ struct thread_data{
  */
 void send_port_number(int sockfd, sockaddr_in in, int process_id);
 
-void receive_and_cast_init_message(int sockfd, Manager *pManager);
+void receive_and_cast_init_message(int sockfd, Link *pManager);
 
-void run_receiver(char* receiver_addr, int s_port, Manager* manager){
+void run_receiver(char* receiver_addr, int s_port, Link* manager){
 
     int sockfd;
     struct sockaddr_in recv_addr, sender_addr;
@@ -94,8 +94,6 @@ void run_receiver(char* receiver_addr, int s_port, Manager* manager){
         usleep(100);
     }
 
-
-    // TODO: while loop and receive messages
     while(true){
         unsigned int len;
         char buf[1024];
@@ -108,18 +106,18 @@ void run_receiver(char* receiver_addr, int s_port, Manager* manager){
         cout << "Message received from port " << sender_addr.sin_port << endl;
 
         unique_lock<mutex> lck(mtx);
-        cv_queue.wait(lck, [&]{ return !queue_locked; });
+        cv_receiver.wait(lck, [&]{ return !queue_locked; });
         queue_locked = true;
         cout << "Message received :)" << endl;
         queue_receiver_master.push(m);
         queue_locked = false;
-        cv_queue.notify_one();
+        cv_receiver.notify_one();
         sleep(10);
     }
 
 }
 
-void receive_and_cast_init_message(int sockfd, Manager *pManager) {
+void receive_and_cast_init_message(int sockfd, Link *pManager) {
     /**
      * This method gets any message sent by other senders during the initialization,
      * and sets the unordered map in manager with maps among the ports of the sender processes
@@ -242,7 +240,7 @@ void send_port_number(int sockfd, sockaddr_in d_addr, int process_id) {
     usleep(100);
 }
 
-Manager::Manager(vector<int> &ports, vector<char *> &ips, vector<int> &processes, int process_number, int number_of_messages){
+Link::Link(vector<int> &ports, vector<char *> &ips, vector<int> &processes, int process_number, int number_of_messages){
     // spawns the threads
     cout << "Creating the manager" << endl;
     this->ports = ports;
@@ -253,7 +251,7 @@ Manager::Manager(vector<int> &ports, vector<char *> &ips, vector<int> &processes
 }
 
 
-void Manager::run(){
+void Link::run(){
     /**
      * invokes receiver and sender runs with threads.
      */
@@ -282,13 +280,13 @@ void Manager::run(){
     while(true){
         // Waiting for the queue from the receiver to be filled.
         unique_lock<mutex> lck(mtx);
-        cv_queue.wait(lck, [&]{return !queue_receiver_master.empty(); });
+        cv_receiver.wait(lck, [&]{return !queue_receiver_master.empty(); });
         queue_locked = true;
         message m = queue_receiver_master.front();
         queue_receiver_master.pop();
         cout << m.content << endl;
         queue_locked = false;
-        cv_queue.notify_one();
+        cv_receiver.notify_one();
 
         // now we are sure to have received a message.
 

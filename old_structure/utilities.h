@@ -11,7 +11,7 @@
  */
 const char* int_to_char_pointer(int n);
 
-Manager* parse_input_data(int argc, char** argv);
+Link* parse_input_data(int argc, char** argv);
 
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 
