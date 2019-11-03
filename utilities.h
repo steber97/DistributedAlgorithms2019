@@ -7,7 +7,7 @@
 #include <vector>
 #include "Link.h"
 
-unordered_map<int, pair<string, int>>* parse_input_data(string &membership_file);
+pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membership_file);
 bool is_ack(string msg);
 void ack_received(string msg);
 

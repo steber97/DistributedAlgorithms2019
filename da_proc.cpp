@@ -6,6 +6,7 @@
 #include <iostream>
 #include "Link.h"
 #include "utilities.h"
+#include "ThreadKill.h"
 
 using namespace std;
 
@@ -54,8 +55,12 @@ int main(int argc, char** argv) {
 
 	string membership_file = argv[2];
 
-	Link manager(process_number, parse_input_data(membership_file));
+	// input data contains both the number of messages to send per each process,
+	// and the mapping among processes and ip/port
+	pair<int, unordered_map<int, pair<string, int>>*> input_data = parse_input_data(membership_file);
 
+	// the condition variable matrix has a conditional variable
+    Link link(process_number, input_data.second);
 
     //wait until start signal
 	while(wait_for_start) {
@@ -67,7 +72,7 @@ int main(int argc, char** argv) {
 
 	cout << "init" << endl;
 
-	manager.init();
+	link.init();
 
     cout << "detached" << endl;
 

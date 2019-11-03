@@ -1,16 +1,12 @@
 #include "Link.h"
 #include "utilities.h"
+#include "ThreadKill.h"
 
 //to handle concurrency on the incoming_messages queue between the manager of the link and the receiver
 bool queue_locked = false;
 mutex mtx_receiver;
 condition_variable cv_receiver;
 queue<string> incoming_messages;
-
-//to handle concurrency on the acks between the manager of the link and the sender
-vector<vector<bool>> acks;
-mutex mtx_sender;
-condition_variable cv_sender;
 
 
 Link::Link(int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id) {
@@ -26,14 +22,16 @@ void Link::init(){
 }
 
 
-void Link::send_to(int d_process_number, string &msg){
+void Link::send_to(int d_process_number, string &msg, int sequence_number){
+    /*
     thread t_rec(run_sender, msg, this->socket_by_process_id[d_process_number].first,
-            this->socket_by_process_id[d_process_number].second);
-    t_rec.detach();
+            this->socket_by_process_id[d_process_number].second, this->process_number, sequence_number);
+    t_rec.detach();*/
 }
 
 
 string Link::get_next_message(){
+    /*
     while(true){
         unique_lock<mutex> lck(mtx_receiver);
         cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
@@ -46,11 +44,12 @@ string Link::get_next_message(){
             ack_received(message);
         else
             return message;
-    }
+    }*/
+    return "ciao";
 }
 
 
-void run_sender(string &msg, string &ip_address, int port){
+void run_sender(string msg, string ip_address, int port, int process_number, int sequence_number){
     struct sockaddr_in d_addr;
     // Create a socket
     int sockfd;
@@ -64,20 +63,20 @@ void run_sender(string &msg, string &ip_address, int port){
     d_addr.sin_port = port;
     // wrong line here
     inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
-    unique_lock<mutex> lck(mtx_sender);
 
-    //TODO attenzione alla concorrenza
-    while(/*ack not received*/){
+
+    bool got_killed = true;
+    while(got_killed){
         const char* message = msg.c_str();
         sendto(sockfd, message, strlen(message),
                MSG_CONFIRM, (const struct sockaddr *) &d_addr,
                sizeof(d_addr));
-        cv_sender.wait_for(lck, chrono::milliseconds(10), [&]{ return acks[/*right ack*/]});
+        got_killed = process_message_thread_kill[process_number][sequence_number].wait_for(std::chrono::milliseconds(1000));
     }
 }
 
 
-void run_receiver(string &ip_address, int port){
+void run_receiver(string ip_address, int port){
     /**
      * Creates a socket to receive incoming messages
      */

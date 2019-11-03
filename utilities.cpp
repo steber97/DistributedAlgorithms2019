@@ -4,7 +4,7 @@
 
 using namespace std;
 
-unordered_map<int, pair<string, int>>* parse_input_data(string &membership_file){
+pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membership_file){
     /**
      * Parse command line arguments, and for every process it spawns N different threads:
      * - N-1 to send packets to the N-1 other processes.
@@ -38,15 +38,21 @@ unordered_map<int, pair<string, int>>* parse_input_data(string &membership_file)
         cout << el.first << " " << el.second.first << " " << el.second.second << endl;
     }
 
-    return socket_by_process_id;
+    return {number_of_messages, socket_by_process_id};
 }
 
 
 bool is_ack(string msg){
-    //TODO checks if msg is an ack
+    /**
+     * a message is an ack if the first bit is 1
+     * if it is a message, the first bit is 0.
+     */
+
+    return msg[0] == 1;
 }
 
 
 void ack_received(string msg){
     //TODO sets the correspondig ack to true
+
 }
