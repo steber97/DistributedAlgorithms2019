@@ -16,9 +16,9 @@ Link::Link(int process_number, unordered_map<int, pair<string, int>> *socket_by_
 
 
 void Link::init(){
-    /*thread t_rec(run_receiver, this->socket_by_process_id[this->process_number].first,
+    thread t_rec(run_receiver, this->socket_by_process_id[this->process_number].first,
             this->socket_by_process_id[this->process_number].second);
-    t_rec.detach();*/
+    t_rec.detach();
 }
 
 
@@ -101,12 +101,12 @@ void run_receiver(string ip_address, int port){
                          &len);
         buf[n] = '\0';
         cout << "received " << buf << endl;
-        unique_lock<mutex> lck(mtx_receiver);
-        cv_receiver.wait(lck, [&]{ return !queue_locked; });
-        queue_locked = true;
-        incoming_messages.push(buf);
-        queue_locked = false;
-        cv_receiver.notify_one();
+//        unique_lock<mutex> lck(mtx_receiver);
+//        cv_receiver.wait(lck, [&]{ return !queue_locked; });
+//        queue_locked = true;
+//        incoming_messages.push(buf);
+//        queue_locked = false;
+//        cv_receiver.notify_one();
     }
 }
 

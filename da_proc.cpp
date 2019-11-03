@@ -76,17 +76,8 @@ int main(int argc, char** argv) {
 
     cout << "detached" << endl;
 
-
-
-	/*
-
-	for (auto el:manager->port_id){
-	    cout << "port " << el.first << "\tprocess id: " << el.second << endl;
-	}
-
 	//broadcast messages
 	printf("Broadcasting messages.\n");
-
 
 	//wait until stopped
 
@@ -97,5 +88,5 @@ int main(int argc, char** argv) {
 		sleep_time.tv_nsec = 0;
 		nanosleep(&sleep_time, NULL);
 	}
-     */
+
 }
