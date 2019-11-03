@@ -78,7 +78,12 @@ int main(int argc, char** argv) {
 	cout << "Try to send message 1 to process 2" << endl;
 
 	link.send_to(2, "0", 1);
-	cout << "message sent" << endl;
+    link.send_to(3, "0", 1);
+    link.send_to(5, "0", 1);
+    link.send_to(4, "0", 1);
+    link.send_to(2, "0", 2);
+
+    cout << "message sent" << endl;
 
     cout << "detached" << endl;
 
