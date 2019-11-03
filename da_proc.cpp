@@ -74,6 +74,12 @@ int main(int argc, char** argv) {
 
 	link.init();
 
+	// try to send some messages to process 2
+	cout << "Try to send message 1 to process 2" << endl;
+
+	link.send_to(2, "0", 1);
+	cout << "message sent" << endl;
+
     cout << "detached" << endl;
 
 	//broadcast messages

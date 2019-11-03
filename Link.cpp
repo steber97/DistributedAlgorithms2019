@@ -22,9 +22,16 @@ void Link::init(){
 }
 
 
+/**
+ * Format of messages:
+ * - 1 bit for ack: 0 normal message, 1 ack.
+ * @param d_process_number destination address.
+ * @param msg the message to send
+ * @param sequence_number the sequence number of the message.
+ */
 void Link::send_to(int d_process_number, string msg, int sequence_number){
     thread t_rec(run_sender, msg, this->socket_by_process_id[d_process_number].first,
-            this->socket_by_process_id[d_process_number].second, this->process_number, sequence_number); //, this->socket_by_process_id[d_process_number].first);
+            this->socket_by_process_id[d_process_number].second, d_process_number, sequence_number); //, this->socket_by_process_id[d_process_number].first);
     t_rec.detach();
 }
 
@@ -46,7 +53,7 @@ string Link::get_next_message(){
     }*/
     return "ciao";
 }
-void run_sender(string msg, string ip_address, int port, int process_sender, int sequence_number){
+void run_sender(string msg, string ip_address, int port, int destination_process, int sequence_number){
     struct sockaddr_in d_addr;
     // Create a socket
     int sockfd;
@@ -63,13 +70,16 @@ void run_sender(string msg, string ip_address, int port, int process_sender, int
 
 
     bool got_killed = true;
+    cout << "Try to send again message " << sequence_number << " to process " << destination_process
+            << " at address " << ip_address << endl;
     while(got_killed){
         const char* message = msg.c_str();
         sendto(sockfd, message, strlen(message),
                MSG_CONFIRM, (const struct sockaddr *) &d_addr,
                sizeof(d_addr));
-        got_killed = process_message_thread_kill[process_sender][sequence_number].wait_for(std::chrono::milliseconds(1000));
+        got_killed = process_message_thread_kill[destination_process][sequence_number].wait_for(std::chrono::milliseconds(1000));
     }
+    cout << "Received ack, stop sending! :)" << endl;
 }
 
 void run_receiver(string ip_address, int port){
@@ -101,12 +111,18 @@ void run_receiver(string ip_address, int port){
                          &len);
         buf[n] = '\0';
         cout << "received " << buf << endl;
-//        unique_lock<mutex> lck(mtx_receiver);
-//        cv_receiver.wait(lck, [&]{ return !queue_locked; });
-//        queue_locked = true;
-//        incoming_messages.push(buf);
-//        queue_locked = false;
-//        cv_receiver.notify_one();
+
+        message m;
+        m = parse_message(string(buf));
+
+        if (m.ack){
+            // we received an ack;
+            process_message_thread_kill[m.proc_number][m.seq_number].kill();
+            cout << "We received an ack for message " << m.seq_number << " by " << m.proc_number << endl;
+        }
+        else{
+            cout << "We received message " << m.seq_number << " from " << m.proc_number << endl;
+        }
     }
 }
 

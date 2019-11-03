@@ -26,7 +26,7 @@ using namespace std;
 
 void run_receiver(string ip_address, int port);
 
-void run_sender(string msg, string ip_address, int port, int process_sender, int sequence_number);
+void run_sender(string msg, string ip_address, int port, int destination_process, int sequence_number);
 //void run_sender();
 
 class Link {
