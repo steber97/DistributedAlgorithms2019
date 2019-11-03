@@ -16,17 +16,16 @@ Link::Link(int process_number, unordered_map<int, pair<string, int>> *socket_by_
 
 
 void Link::init(){
-    thread t_rec(run_receiver, this->socket_by_process_id[this->process_number].first,
+    /*thread t_rec(run_receiver, this->socket_by_process_id[this->process_number].first,
             this->socket_by_process_id[this->process_number].second);
-    t_rec.detach();
+    t_rec.detach();*/
 }
 
 
-void Link::send_to(int d_process_number, string &msg, int sequence_number){
-    /*
+void Link::send_to(int d_process_number, string msg, int sequence_number){
     thread t_rec(run_sender, msg, this->socket_by_process_id[d_process_number].first,
-            this->socket_by_process_id[d_process_number].second, this->process_number, sequence_number);
-    t_rec.detach();*/
+            this->socket_by_process_id[d_process_number].second, this->process_number, sequence_number); //, this->socket_by_process_id[d_process_number].first);
+    t_rec.detach();
 }
 
 
@@ -47,9 +46,7 @@ string Link::get_next_message(){
     }*/
     return "ciao";
 }
-
-
-void run_sender(string msg, string ip_address, int port, int process_number, int sequence_number){
+void run_sender(string msg, string ip_address, int port, int process_sender, int sequence_number){
     struct sockaddr_in d_addr;
     // Create a socket
     int sockfd;
@@ -71,10 +68,9 @@ void run_sender(string msg, string ip_address, int port, int process_number, int
         sendto(sockfd, message, strlen(message),
                MSG_CONFIRM, (const struct sockaddr *) &d_addr,
                sizeof(d_addr));
-        got_killed = process_message_thread_kill[process_number][sequence_number].wait_for(std::chrono::milliseconds(1000));
+        got_killed = process_message_thread_kill[process_sender][sequence_number].wait_for(std::chrono::milliseconds(1000));
     }
 }
-
 
 void run_receiver(string ip_address, int port){
     /**
@@ -113,5 +109,4 @@ void run_receiver(string ip_address, int port){
         cv_receiver.notify_one();
     }
 }
-
 
