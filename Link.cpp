@@ -26,12 +26,16 @@ void Link::init(){
 }
 
 
+int Link::get_process_number() {
+    return this->process_number;
+}
+
+
 void Link::send_to(int d_process_number, string &msg){
     thread t_rec(run_sender, msg, this->socket_by_process_id[d_process_number].first,
             this->socket_by_process_id[d_process_number].second);
     t_rec.detach();
 }
-
 
 string Link::get_next_message(){
     while(true){

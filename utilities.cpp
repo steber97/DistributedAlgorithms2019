@@ -1,8 +1,12 @@
-
-
 #include "utilities.h"
 
 using namespace std;
+
+
+int unique_id(message &msg, int number_of_messages){
+    return (msg.proc_number - 1)*number_of_messages + msg.seq_number;
+}
+
 
 unordered_map<int, pair<string, int>>* parse_input_data(string &membership_file){
     /**
@@ -12,7 +16,6 @@ unordered_map<int, pair<string, int>>* parse_input_data(string &membership_file)
      * - 1 to manage the queue of received messages (shared with the receiver process) and to tell senders
      *      when acks are received (so that stop and wait can be resumed).
      */
-
     unordered_map<int, pair<string, int>> *socket_by_process_id = new(unordered_map<int, pair<string, int>>);
 
     ifstream mem_in(membership_file);
@@ -50,3 +53,4 @@ bool is_ack(string msg){
 void ack_received(string msg){
     //TODO sets the correspondig ack to true
 }
+
