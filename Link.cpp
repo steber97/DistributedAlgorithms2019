@@ -43,7 +43,7 @@ int Link::get_process_number() {
 }
 
 
-string Link::get_next_message(){
+message Link::get_next_message(){
     while(true){
         cout << "waiting for next message" << endl;
         unique_lock<mutex> lck(mtx_receiver);
@@ -54,7 +54,6 @@ string Link::get_next_message(){
         queue_locked = false;
         cv_receiver.notify_one();
 
-
         if (m.ack){
             // we received an ack;
             timer_killer_by_process_message[m.proc_number][m.seq_number].kill();
@@ -64,7 +63,7 @@ string Link::get_next_message(){
             cout << "We received message " << m.seq_number << " from " << m.proc_number << endl;
             pair<string, int> dest = this->socket_by_process_id[m.proc_number];
             send_ack(dest.first, dest.second, this->process_number, m.seq_number);
-            // Beb delivery
+            return m;
         }
 
     }
