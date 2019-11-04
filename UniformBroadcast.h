@@ -5,8 +5,8 @@
 #ifndef DISTRIBUTED_ALGORITHMS_UNIFORMBROADCAST_H
 #define DISTRIBUTED_ALGORITHMS_UNIFORMBROADCAST_H
 
-#include <unordered_map>
 #include <unordered_set>
+
 #include "Link.h"
 #include "utilities.h"
 
@@ -17,9 +17,9 @@ private:
     Link *link;
     vector<int> processes;
     int number_of_messages;
-    unordered_set<struct message, struct message_hash, struct message_equal> *delivered;
-    unordered_set<struct message, struct message_hash, struct message_equal> *forward;
-    vector<unordered_set<struct message, struct message_hash, struct message_equal>> *acks;
+    unordered_set<message, message_hash, message_equal> *delivered;
+    unordered_set<message, message_hash, message_equal> *forward;
+    vector<unordered_set<message, message_hash, message_equal>> *acks;
     condition_variable cv_forward, cv_delivered, cv_acks;
     mutex mtx_forward, mtx_delivered, mtx_acks;
     bool forward_locked, delivered_locked, acks_locked;
@@ -41,6 +41,6 @@ public:
     void addDelivered(message &msg);
 };
 
-bool can_deliver(UniformBroadcast* urb);
+void handle_delivery(UniformBroadcast* urb);
 
 #endif //DISTRIBUTED_ALGORITHMS_UNIFORMBROADCAST_H

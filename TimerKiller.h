@@ -1,7 +1,5 @@
-#ifndef DISTRIBUTED_ALGORITHMS_THREADKILL_H
-#define DISTRIBUTED_ALGORITHMS_THREADKILL_H
-
-
+#ifndef DISTRIBUTED_ALGORITHMS_TIMERKILLER_H
+#define DISTRIBUTED_ALGORITHMS_TIMERKILLER_H
 
 #include <iostream>
 #include <thread>
@@ -11,7 +9,6 @@
 #include <chrono>
 #include <iostream>
 #include <vector>
-
 
 using namespace std;
 
@@ -36,8 +33,12 @@ private:
     bool terminate = false;
 };
 
-extern timer_killer process_message_thread_kill[1000][1000];
+/*
+ * This data structure contains timer_killers for each possible sender,
+ * ordered by process_number first, and then by (message) sequence_number
+ */
+extern timer_killer timer_killer_by_process_message[1000][1000];
 // vector<timer_killer> myv;
 
 
-#endif //DISTRIBUTED_ALGORITHMS_THREADKILL_H
+#endif //DISTRIBUTED_ALGORITHMS_TIMERKILLER_H

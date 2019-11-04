@@ -1,5 +1,4 @@
 #include "UniformBroadcast.h"
-#include "utilities.h"
 
 
 UniformBroadcast::UniformBroadcast(Link *link, vector<int> &processes, int number_of_messages) {
@@ -16,7 +15,7 @@ UniformBroadcast::UniformBroadcast(Link *link, vector<int> &processes, int numbe
 
 
 void UniformBroadcast::init() {
-    thread delivery_checker(can_deliver, this);
+    thread delivery_checker(handle_delivery, this);
     delivery_checker.detach();
 }
 
@@ -112,7 +111,7 @@ int UniformBroadcast::get_number_of_messages(){
 }
 
 
-bool can_deliver(UniformBroadcast* urb) {
+void handle_delivery(UniformBroadcast* urb) {
     unordered_set<message> forwarded_messages = urb->forwarded_messages();
     for(message m: forwarded_messages){
         if(!urb->is_delivered(m) && (urb->acks_received(m) > urb->get_number_of_messages())){

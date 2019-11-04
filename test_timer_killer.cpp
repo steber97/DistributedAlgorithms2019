@@ -2,12 +2,7 @@
 #include <thread>
 #include <condition_variable>
 #include <mutex>
-#include <future>
 #include <chrono>
-#include <iostream>
-#include <vector>
-
-//using namespace std::literals::chrono_literals;
 
 struct timer_killer {
     // returns false if killed:

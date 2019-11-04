@@ -8,8 +8,6 @@
 #include <algorithm>
 #include <unordered_map>
 
-
-
 using namespace std;
 
 /**
@@ -49,18 +47,13 @@ public:
 struct message_hash {
 public:
     size_t operator()(const message& msg) const {
-        return std::hash<int>()((msg.proc_number-1)*1000 + msg.seq_number);
+        return hash<int>()((msg.proc_number-1)*1000 + msg.seq_number);
     }
 };
-
-pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membership_file);
-
 
 bool is_ack(string msg);
 void ack_received(string msg);
 int unique_id(message &msg);
-
-
 
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 

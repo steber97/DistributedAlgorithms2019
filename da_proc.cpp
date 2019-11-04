@@ -7,7 +7,7 @@
 
 #include "Link.h"
 #include "utilities.h"
-#include "ThreadKill.h"
+#include "TimerKiller.h"
 
 using namespace std;
 

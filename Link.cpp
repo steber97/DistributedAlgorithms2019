@@ -1,6 +1,6 @@
 #include "Link.h"
 #include "utilities.h"
-#include "ThreadKill.h"
+#include "TimerKiller.h"
 
 //to handle concurrency on the incoming_messages queue between the manager of the link and the receiver
 bool queue_locked = false;
@@ -57,7 +57,7 @@ string Link::get_next_message(){
 
         if (m.ack){
             // we received an ack;
-            process_message_thread_kill[m.proc_number][m.seq_number].kill();
+            timer_killer_by_process_message[m.proc_number][m.seq_number].kill();
             cout << "We received an ack for message " << m.seq_number << " by " << m.proc_number << endl;
         }
         else{
@@ -98,19 +98,19 @@ void run_sender(string msg, string ip_address, int port, int destination_process
     // wrong line here
     inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
 
-
-    bool got_killed = true;
+    bool keep_sending = true;
     cout << "Try to send again message " << sequence_number << " to process " << destination_process
             << " at address " << ip_address << endl;
-    while(got_killed){
+    while(keep_sending){
         const char* message = msg.c_str();
         sendto(sockfd, message, strlen(message),
                MSG_CONFIRM, (const struct sockaddr *) &d_addr,
                sizeof(d_addr));
-        got_killed = process_message_thread_kill[destination_process][sequence_number].wait_for(std::chrono::milliseconds(1000));
+        keep_sending = timer_killer_by_process_message[destination_process][sequence_number].wait_for(std::chrono::milliseconds(1000));
     }
     cout << "Received ack, stop sending! :)" << endl;
 }
+
 
 /**
  * Sends ack message,
