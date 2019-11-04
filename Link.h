@@ -20,25 +20,26 @@
 #include <thread>
 #include <condition_variable>
 
+#include "utilities.h"
+
 #define MAXLINE 1024
 
 using namespace std;
-
-void run_receiver(string ip_address, int port);
 
 void run_sender(string msg, string ip_address, int port, int destination_process, int sequence_number);
 //void run_sender();
 
 class Link {
-private:
-    int process_number;
-    unordered_map<int, pair<string, int>> socket_by_process_id;
+
 public:
     Link(int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id);
     void init();
     string get_next_message();
-    void send_to(int d_process_number, string msg, int seq_number);
+    void send_to(int d_process_number, message& msg, int seq_number);
+    unordered_map<int, pair<string, int>> socket_by_process_id;
+    int process_number;
 };
 
+void run_receiver(string ip_address, int port, Link* link);
 
 #endif //DISTRIBUTEDALGORITHMS2019_MANAGER_H

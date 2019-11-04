@@ -17,7 +17,7 @@ Link::Link(int process_number, unordered_map<int, pair<string, int>> *socket_by_
 
 void Link::init(){
     thread t_rec(run_receiver, this->socket_by_process_id[this->process_number].first,
-            this->socket_by_process_id[this->process_number].second);
+            this->socket_by_process_id[this->process_number].second, this);
     t_rec.detach();
 }
 
@@ -29,15 +29,17 @@ void Link::init(){
  * @param msg the message to send
  * @param sequence_number the sequence number of the message.
  */
-void Link::send_to(int d_process_number, string msg, int sequence_number){
-    thread t_rec(run_sender, msg, this->socket_by_process_id[d_process_number].first,
+void Link::send_to(int d_process_number, message& msg, int sequence_number){
+
+    string message = (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number);
+    thread t_rec(run_sender, message, this->socket_by_process_id[d_process_number].first,
             this->socket_by_process_id[d_process_number].second, d_process_number, sequence_number); //, this->socket_by_process_id[d_process_number].first);
     t_rec.detach();
 }
 
 
 string Link::get_next_message(){
-    /*
+/*
     while(true){
         unique_lock<mutex> lck(mtx_receiver);
         cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
@@ -51,7 +53,6 @@ string Link::get_next_message(){
         else
             return message;
     }*/
-    return "ciao";
 }
 void run_sender(string msg, string ip_address, int port, int destination_process, int sequence_number){
     struct sockaddr_in d_addr;
@@ -82,7 +83,33 @@ void run_sender(string msg, string ip_address, int port, int destination_process
     cout << "Received ack, stop sending! :)" << endl;
 }
 
-void run_receiver(string ip_address, int port){
+
+void send_ack(string ip_address, int port, int s_process_number, int sequence_number) {
+    struct sockaddr_in d_addr;
+    // Create a socket
+    int sockfd;
+    // Creating socket file descriptor
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        cerr << "socket creation failed";
+        exit(EXIT_FAILURE);
+    }
+    memset(&d_addr, 0, sizeof(d_addr));
+    d_addr.sin_family = AF_INET;
+    d_addr.sin_port = port;
+    // wrong line here
+    inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
+
+    string msg = "1-" + to_string(s_process_number) + "-" + to_string(sequence_number);
+
+    const char *message = msg.c_str();
+    sendto(sockfd, message, strlen(message),
+           MSG_CONFIRM, (const struct sockaddr *) &d_addr,
+           sizeof(d_addr));
+
+}
+
+
+void run_receiver(string ip_address, int port, Link* link){
     /**
      * Creates a socket to receive incoming messages
      */
@@ -122,6 +149,9 @@ void run_receiver(string ip_address, int port){
         }
         else{
             cout << "We received message " << m.seq_number << " from " << m.proc_number << endl;
+            pair<string, int> dest = link->socket_by_process_id[m.proc_number];
+            send_ack(dest.first, dest.second, link->process_number, m.seq_number);
+            // Beb delivery
         }
     }
 }

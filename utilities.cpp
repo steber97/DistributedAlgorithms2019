@@ -2,7 +2,6 @@
 
 #include "utilities.h"
 
-using namespace std;
 
 pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membership_file){
     /**

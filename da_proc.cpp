@@ -4,6 +4,7 @@
 #include <time.h>
 #include <thread>
 #include <iostream>
+
 #include "Link.h"
 #include "utilities.h"
 #include "ThreadKill.h"
@@ -75,13 +76,19 @@ int main(int argc, char** argv) {
 	link.init();
 
 	// try to send some messages to process 2
-	cout << "Try to send message 1 to process 2" << endl;
 
-	link.send_to(2, "0", 1);
-    link.send_to(3, "0", 1);
-    link.send_to(5, "0", 1);
-    link.send_to(4, "0", 1);
-    link.send_to(2, "0", 2);
+	vector<string> messages;
+	for (int i = 0; i<5; i++){
+	    if (i+1 != process_number){
+            message m ;
+            m.ack = false;
+            m.seq_number = 1;
+            m.proc_number = link.process_number;
+            m.payload = "";
+            cout << "Send message " << m.seq_number << " to process " << m.proc_number << endl;
+            link.send_to(i+1, m, 1);
+	    }
+	}
 
     cout << "message sent" << endl;
 
