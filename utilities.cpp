@@ -1,12 +1,10 @@
 #include "utilities.h"
 
-
 int unique_id(message &msg, int number_of_messages){
     return (msg.proc_number - 1)*number_of_messages + msg.seq_number;
-}
-
 
 pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membership_file){
+
     /**
      * Parse command line arguments, and for every process it spawns N different threads:
      * - N-1 to send packets to the N-1 other processes.
@@ -56,11 +54,9 @@ bool is_ack(string msg){
 void ack_received(string msg){
     //TODO sets the correspondig ack to true
 
-
 }
 
-message parse_message(string str)
-{
+message parse_message(string str) {
     size_t current, previous = 0;
     vector<string> cont;
     char delim = '-';
