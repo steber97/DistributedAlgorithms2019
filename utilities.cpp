@@ -56,8 +56,6 @@ int unique_id(message &msg, int number_of_messages) {
 }
 
 
-
-
 bool is_ack(string msg){
     /**
      * a message is an ack if the first bit is 1

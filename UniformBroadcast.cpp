@@ -5,9 +5,9 @@ UniformBroadcast::UniformBroadcast(Link *link, vector<int> &processes, int numbe
     this->link = link;
     this->processes = processes;
     this->number_of_messages = number_of_messages;
-    this->forward = new unordered_set<message, message_hash, message_equal>;
-    this->delivered = new unordered_set<message, message_hash, message_equal>;
-    this->acks = new vector<unordered_set<message, message_hash, message_equal>>(number_of_messages);
+    this->forward = new unordered_set<int>;
+    this->delivered = new unordered_set<int>;
+    this->acks = new vector<unordered_set<int>>(number_of_messages);
     this->forward_locked = false;
     this->delivered_locked = false;
     this->acks_locked = false;
@@ -29,78 +29,63 @@ void UniformBroadcast::beb_broadcast(message &msg) {
 
 
 void UniformBroadcast::ur_broadcast(message &msg) {
-    forward->insert(msg);
+    forward->insert(msg.seq_number);
     beb_broadcast(msg);
 }
 
 
 void UniformBroadcast::beb_deliver(message &msg) {
-    (*acks)[msg.seq_number].insert(msg);
-    if (forward->find(msg) == forward->end()) {
-        forward->insert(msg);
+    (*acks)[msg.seq_number].insert(msg.proc_number);
+    if (forward->find(msg.seq_number) == forward->end()) {
+        forward->insert(msg.seq_number);
         beb_broadcast(msg);
     }
 }
 
 
-void UniformBroadcast::ur_deliver(message &msg) {
+void UniformBroadcast::ur_deliver(int m_seq_number) {
     //TODO
 }
 
 
-unordered_set<struct message, struct message_hash, struct message_equal> * UniformBroadcast::forwarded_messages() {
+unordered_set<int > * UniformBroadcast::forwarded_messages() {
     unique_lock<mutex> lck(mtx_forward);
-    cv_forward.wait(lck, this->is_forward_locked());
+    cv_forward.wait(lck, [&]{ return forward_locked;});
     this->forward_locked = true;
-    unordered_set<struct message, struct message_hash, struct message_equal> *forwarded_messages = forward;
+    unordered_set<int > *forwarded_messages = forward;
     this->forward_locked = false;
     cv_forward.notify_all();
     return forwarded_messages;
 }
 
 
-bool UniformBroadcast::is_delivered(message &msg) {
+bool UniformBroadcast::is_delivered(int m_seq_number) {
     unique_lock<mutex> lck(mtx_delivered);
-    cv_delivered.wait(lck, this->is_delivered_locked());
+    cv_delivered.wait(lck, [&]{ return delivered_locked;});
     this->delivered_locked = true;
-    bool is_delivered = (delivered->find(msg) != delivered->end());
+    bool is_delivered = (delivered->find(m_seq_number) != delivered->end());
     this->delivered_locked = false;
     cv_delivered.notify_all();
     return is_delivered;
 }
 
 
-int UniformBroadcast::acks_received(message &msg) {
+int UniformBroadcast::acks_received(int m_seq_number) {
     unique_lock<mutex> lck(mtx_acks);
-    cv_acks.wait(lck, this->is_acks_locked());
+    cv_acks.wait(lck, [&]{ return acks_locked;});
     this->acks_locked = true;
-    int n_acks = (*acks)[msg.seq_number].size();
+    int n_acks = (*acks)[m_seq_number].size();
     this->acks_locked = false;
     cv_acks.notify_all();
     return n_acks;
 }
 
 
-bool UniformBroadcast::is_forward_locked() {
-    return forward_locked;
-}
-
-
-bool UniformBroadcast::is_delivered_locked() {
-    return delivered_locked;
-}
-
-
-bool UniformBroadcast::is_acks_locked() {
-    return acks_locked;
-}
-
-
-void UniformBroadcast::addDelivered(message &msg){
+void UniformBroadcast::addDelivered(int m_seq_number){
     unique_lock<mutex> lck(mtx_delivered);
-    cv_delivered.wait(lck, this->is_delivered_locked());
+    cv_delivered.wait(lck, [&]{return delivered_locked;});
     this->delivered_locked = true;
-    delivered->insert(msg);
+    delivered->insert(m_seq_number);
     this->delivered_locked = false;
     cv_delivered.notify_all();
 }
@@ -112,11 +97,10 @@ int UniformBroadcast::get_number_of_messages(){
 
 
 void handle_delivery(UniformBroadcast* urb) {
-    unordered_set<message> forwarded_messages = urb->forwarded_messages();
-    for(message m: forwarded_messages){
-        if(!urb->is_delivered(m) && (urb->acks_received(m) > urb->get_number_of_messages())){
-            urb->addDelivered(m);
-            urb->ur_deliver(m);
+    for(int m_seq_number: *urb->forwarded_messages()){
+        if(!urb->is_delivered(m_seq_number) && (urb->acks_received(m_seq_number) > urb->get_number_of_messages())){
+            urb->addDelivered(m_seq_number);
+            urb->ur_deliver(m_seq_number);
         }
     }
 }

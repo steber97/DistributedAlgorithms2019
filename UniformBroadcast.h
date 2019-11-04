@@ -1,7 +1,3 @@
-//
-// Created by orazio on 11/3/19.
-//
-
 #ifndef DISTRIBUTED_ALGORITHMS_UNIFORMBROADCAST_H
 #define DISTRIBUTED_ALGORITHMS_UNIFORMBROADCAST_H
 
@@ -17,9 +13,11 @@ private:
     Link *link;
     vector<int> processes;
     int number_of_messages;
-    unordered_set<message, message_hash, message_equal> *delivered;
-    unordered_set<message, message_hash, message_equal> *forward;
-    vector<unordered_set<message, message_hash, message_equal>> *acks;
+    unordered_set<int> *delivered;
+    unordered_set<int> *forward;
+    vector<unordered_set<int >> *acks; //a vector (accessible by seq_number of messages) that contains,
+                                       // for each message m, a set of the process_numbers of the processes
+                                       // who received and then broadcasted successfully m
     condition_variable cv_forward, cv_delivered, cv_acks;
     mutex mtx_forward, mtx_delivered, mtx_acks;
     bool forward_locked, delivered_locked, acks_locked;
@@ -30,15 +28,12 @@ public:
     void beb_broadcast(message &msg);
     void ur_broadcast(message &msg);
     void beb_deliver(message &msg);
-    void ur_deliver(message &msg);
-    unordered_set<struct message, struct message_hash, struct message_equal> * forwarded_messages();
-    bool is_delivered(message &msg);
-    int acks_received(message &msg);
-    bool is_forward_locked();
-    bool is_delivered_locked();
-    bool is_acks_locked();
+    void ur_deliver(int m_seq_number);
+    unordered_set<int> * forwarded_messages();
+    bool is_delivered(int m_seq_number);
+    int acks_received(int m_seq_number);
     int get_number_of_messages();
-    void addDelivered(message &msg);
+    void addDelivered(int m_seq_number);
 };
 
 void handle_delivery(UniformBroadcast* urb);
