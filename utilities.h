@@ -15,7 +15,7 @@ using namespace std;
 /**
  * This is the message structure.
  */
-struct message{
+struct message  {
     bool ack;
     int seq_number;
     int proc_number;

@@ -29,13 +29,13 @@ void Link::init(){
  * @param msg the message to send
  * @param sequence_number the sequence number of the message.
  */
-void Link::send_to(int d_process_number, message& msg, int sequence_number) {
+void Link::send_to(int d_process_number, message& msg) {
 
     string message =
             (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number);
     thread t_rec(run_sender, message, this->socket_by_process_id[d_process_number].first,
                  this->socket_by_process_id[d_process_number].second, d_process_number,
-                 sequence_number); //, this->socket_by_process_id[d_process_number].first);
+                 msg.seq_number); //, this->socket_by_process_id[d_process_number].first);
 }
 
 int Link::get_process_number() {

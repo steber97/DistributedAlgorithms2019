@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
             m.proc_number = link.process_number;
             m.payload = "";
             cout << "Send message " << m.seq_number << " to process " << m.proc_number << endl;
-            link.send_to(i+1, m, 1);
+            link.send_to(i+1, m);
 	    }
 	}
 
