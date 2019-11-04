@@ -56,6 +56,7 @@ class Link {
 public:
     Link(int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id);
     void init();
+    int get_process_number();
     string get_next_message();
     void send_to(int d_process_number, message& msg, int seq_number);
     unordered_map<int, pair<string, int>> socket_by_process_id;
