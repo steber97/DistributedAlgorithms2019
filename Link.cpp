@@ -6,7 +6,7 @@
 bool queue_locked = false;
 mutex mtx_receiver;
 condition_variable cv_receiver;
-queue<string> incoming_messages;
+queue<message> incoming_messages;
 
 
 Link::Link(int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id) {
@@ -39,21 +39,45 @@ void Link::send_to(int d_process_number, message& msg, int sequence_number){
 
 
 string Link::get_next_message(){
-/*
     while(true){
+        cout << "waiting for next message" << endl;
         unique_lock<mutex> lck(mtx_receiver);
         cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
         queue_locked = true;
-        string message = incoming_messages.front();
+        message m = incoming_messages.front();
         incoming_messages.pop();
         queue_locked = false;
         cv_receiver.notify_one();
-        if(is_ack(message))
-            ack_received(message);
-        else
-            return message;
-    }*/
+
+
+        if (m.ack){
+            // we received an ack;
+            process_message_thread_kill[m.proc_number][m.seq_number].kill();
+            cout << "We received an ack for message " << m.seq_number << " by " << m.proc_number << endl;
+        }
+        else{
+            cout << "We received message " << m.seq_number << " from " << m.proc_number << endl;
+            pair<string, int> dest = this->socket_by_process_id[m.proc_number];
+            send_ack(dest.first, dest.second, this->process_number, m.seq_number);
+            // Beb delivery
+        }
+
+    }
 }
+
+/**
+ * Run sender: it is run by a single thread,
+ * creates a socket which will periodically try to send a message to
+ * the desired ip_address and port.
+ * Whenever the ack is received, the receiver notify the
+ * timer_killer object, which stops the sender thread
+ * @param msg the message to send, already converted to string.
+ * @param ip_address the destination ip address
+ * @param port the destination port
+ * @param destination_process the destination process number (it is used to
+ *              receive the notification by the receiver about the ack receival)
+ * @param sequence_number the sequence number of the message.
+ */
 void run_sender(string msg, string ip_address, int port, int destination_process, int sequence_number){
     struct sockaddr_in d_addr;
     // Create a socket
@@ -83,7 +107,14 @@ void run_sender(string msg, string ip_address, int port, int destination_process
     cout << "Received ack, stop sending! :)" << endl;
 }
 
-
+/**
+ * Sends ack message,
+ * it is triggered whenever a normal message is received.
+ * @param ip_address ip address where to send the ack
+ * @param port the port where to send the acks
+ * @param s_process_number process number of the source (which has to be reported in the ack message)
+ * @param sequence_number the sequence number of the message we are acking.
+ */
 void send_ack(string ip_address, int port, int s_process_number, int sequence_number) {
     struct sockaddr_in d_addr;
     // Create a socket
@@ -99,6 +130,7 @@ void send_ack(string ip_address, int port, int s_process_number, int sequence_nu
     // wrong line here
     inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
 
+    // Create the ack string (1-source process-sequence number of message to ack)
     string msg = "1-" + to_string(s_process_number) + "-" + to_string(sequence_number);
 
     const char *message = msg.c_str();
@@ -109,10 +141,18 @@ void send_ack(string ip_address, int port, int s_process_number, int sequence_nu
 }
 
 
+/**
+ * This is the receiver:
+ * it starts listening all messages coming to the desired ip_address and port
+ * (the address and port of the actual process).
+ * Whenever it receives a message, it puts messages in a shared queue
+ * with the Link, which will manage to process the data according to
+ * the needs (acks or messages)
+ * @param ip_address the ip address the receiver is linked to
+ * @param port  the receiver port
+ * @param link  the link object
+ */
 void run_receiver(string ip_address, int port, Link* link){
-    /**
-     * Creates a socket to receive incoming messages
-     */
     int sockfd;
     struct sockaddr_in sock;
     // Creating socket file descriptor
@@ -130,7 +170,6 @@ void run_receiver(string ip_address, int port, Link* link){
         exit(EXIT_FAILURE);
     }
     while(true){
-        cout << "Waiting for message" << endl;
         unsigned int len;
         char buf[1024];
         struct sockaddr_in sender_addr;
@@ -142,17 +181,11 @@ void run_receiver(string ip_address, int port, Link* link){
         message m;
         m = parse_message(string(buf));
 
-        if (m.ack){
-            // we received an ack;
-            process_message_thread_kill[m.proc_number][m.seq_number].kill();
-            cout << "We received an ack for message " << m.seq_number << " by " << m.proc_number << endl;
-        }
-        else{
-            cout << "We received message " << m.seq_number << " from " << m.proc_number << endl;
-            pair<string, int> dest = link->socket_by_process_id[m.proc_number];
-            send_ack(dest.first, dest.second, link->process_number, m.seq_number);
-            // Beb delivery
-        }
+        // Put the message in the queue.
+        unique_lock<mutex> lck(mtx_receiver);
+        cv_receiver.wait(lck, [&] { return !queue_locked; });
+        incoming_messages.push(m);
+        cv_receiver.notify_one();
     }
 }
 

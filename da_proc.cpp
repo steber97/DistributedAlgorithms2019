@@ -90,9 +90,10 @@ int main(int argc, char** argv) {
 	    }
 	}
 
-    cout << "message sent" << endl;
-
-    cout << "detached" << endl;
+    while(true){
+        // no idea if it is right
+        link.get_next_message();
+    }
 
 	//broadcast messages
 	printf("Broadcasting messages.\n");
