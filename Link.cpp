@@ -35,7 +35,8 @@ void Link::send_to(int d_process_number, message& msg) {
             (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number);
     thread t_rec(run_sender, message, this->socket_by_process_id[d_process_number].first,
                  this->socket_by_process_id[d_process_number].second, d_process_number,
-                 msg.seq_number); //, this->socket_by_process_id[d_process_number].first);
+                 msg.seq_number);
+    t_rec.detach();
 }
 
 int Link::get_process_number() {
@@ -45,7 +46,6 @@ int Link::get_process_number() {
 
 message Link::get_next_message(){
     while(true){
-        cout << "waiting for next message" << endl;
         unique_lock<mutex> lck(mtx_receiver);
         cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
         queue_locked = true;
@@ -57,10 +57,8 @@ message Link::get_next_message(){
         if (m.ack){
             // we received an ack;
             timer_killer_by_process_message[m.proc_number][m.seq_number].kill();
-            cout << "We received an ack for message " << m.seq_number << " by " << m.proc_number << endl;
         }
         else{
-            cout << "We received message " << m.seq_number << " from " << m.proc_number << endl;
             pair<string, int> dest = this->socket_by_process_id[m.proc_number];
             send_ack(dest.first, dest.second, this->process_number, m.seq_number);
             return m;
@@ -87,10 +85,12 @@ void run_sender(string msg, string ip_address, int port, int destination_process
     // Create a socket
     int sockfd;
     // Creating socket file descriptor
-    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-        cerr << "socket creation failed";
-        exit(EXIT_FAILURE);
+    while ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        //cerr << "socket creation failed but maybe recovering";
     }
+    int optval = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+
     memset(&d_addr, 0, sizeof(d_addr));
     d_addr.sin_family = AF_INET;
     d_addr.sin_port = port;
@@ -98,8 +98,6 @@ void run_sender(string msg, string ip_address, int port, int destination_process
     inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
 
     bool keep_sending = true;
-    cout << "Try to send again message " << sequence_number << " to process " << destination_process
-            << " at address " << ip_address << endl;
     while(keep_sending){
         const char* message = msg.c_str();
         sendto(sockfd, message, strlen(message),
@@ -107,7 +105,7 @@ void run_sender(string msg, string ip_address, int port, int destination_process
                sizeof(d_addr));
         keep_sending = timer_killer_by_process_message[destination_process][sequence_number].wait_for(std::chrono::milliseconds(1000));
     }
-    cout << "Received ack, stop sending! :)" << endl;
+    //cout << "Received ack for " << sequence_number << ", stop sending! :)" << endl;
 }
 
 
@@ -124,10 +122,11 @@ void send_ack(string ip_address, int port, int s_process_number, int sequence_nu
     // Create a socket
     int sockfd;
     // Creating socket file descriptor
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        cerr << "socket creation failed";
-        exit(EXIT_FAILURE);
+    while ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        //cerr << "socket creation failed but maybe recovery";
     }
+    int optval = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
     memset(&d_addr, 0, sizeof(d_addr));
     d_addr.sin_family = AF_INET;
     d_addr.sin_port = port;
@@ -160,18 +159,19 @@ void run_receiver(string ip_address, int port, Link* link){
     int sockfd;
     struct sockaddr_in sock;
     // Creating socket file descriptor
-    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-        cerr << "socket creation failed";
-        exit(EXIT_FAILURE);
+    while ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        //cerr << "socket creation failed but maybe recovery";
     }
+    int optval = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
     memset(&(sock), 0, sizeof(sock));
     sock.sin_family = AF_INET; // IPv4
     inet_pton(AF_INET, ip_address.c_str(), &(sock.sin_addr));
     sock.sin_port = port;
-    if ( bind(sockfd, (const struct sockaddr *)&(sock),
+    while ( bind(sockfd, (const struct sockaddr *)&(sock),
               sizeof(sock)) < 0 ) {
         perror("bind failed");
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
     }
     while(true){
         unsigned int len;
@@ -180,8 +180,6 @@ void run_receiver(string ip_address, int port, Link* link){
         int n = recvfrom(sockfd, (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
                          &len);
         buf[n] = '\0';
-        cout << "received " << buf << endl;
-
         message m;
         m = parse_message(string(buf));
 

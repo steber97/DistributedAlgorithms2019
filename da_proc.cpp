@@ -59,6 +59,8 @@ int main(int argc, char** argv) {
 	// input data contains both the number of messages to send per each process,
 	// and the mapping among processes and ip/port
 	pair<int, unordered_map<int, pair<string, int>>*> input_data = parse_input_data(membership_file);
+    int total_number_of_processes = input_data.second->size();
+    int total_number_of_messages = input_data.first;
 
 	// the condition variable matrix has a conditional variable
     Link link(process_number, input_data.second);
@@ -75,31 +77,36 @@ int main(int argc, char** argv) {
 
 	link.init();
 
-	// try to send some messages to process 2
-
-	vector<string> messages;
-	for (int i = 0; i<5; i++){
-	    if (i+1 != process_number){
-            message m ;
-            m.ack = false;
-            m.seq_number = 1;
-            m.proc_number = link.process_number;
-            m.payload = "";
-            cout << "Send message " << m.seq_number << " to process " << m.proc_number << endl;
-            link.send_to(i+1, m);
-	    }
-	}
-
-    while(true){
-        // no idea if it is right
-        link.get_next_message();
-    }
-
 	//broadcast messages
 	printf("Broadcasting messages.\n");
 
-	//wait until stopped
+	// Try to send a lot of messages at the time.
+	for (int i = 1; i<=total_number_of_processes; i++){
+        if (i != process_number){
+            for (int j = 1; j<=total_number_of_messages; j++) {
+                message m;
+                m.ack = false;
+                m.seq_number = j;
+                m.proc_number = link.process_number;
+                m.payload = "";
+                //cout << "Send message " << m.seq_number << " to process " << m.proc_number << endl;
+                link.send_to(i, m);
+            }
+        }
+    }
 
+    vector<vector<bool>> messages_received(total_number_of_processes+1, vector<bool>(total_number_of_messages+1, false));
+    int total_messages_received = 0;
+    while(total_messages_received != (total_number_of_messages * (total_number_of_processes-1) )){
+        message m = link.get_next_message();
+        if (!messages_received[m.proc_number][m.seq_number]){
+
+            total_messages_received ++;
+            messages_received[m.proc_number][m.seq_number] = true;
+        }
+    }
+
+    cout << "Finally, we must have got " << total_messages_received << endl;
 
     while(1) {
 		struct timespec sleep_time;

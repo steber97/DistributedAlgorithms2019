@@ -23,9 +23,6 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
     }
     int number_of_messages;
     mem_in >> number_of_messages;
-    for (auto el: *socket_by_process_id){
-        cout << el.first << " " << el.second.first << " " << el.second.second << endl;
-    }
     return {number_of_messages, socket_by_process_id};
 }
 
@@ -61,7 +58,6 @@ bool is_ack(string msg){
      * a message is an ack if the first bit is 1
      * if it is a message, the first bit is 0.
      */
-    cout << " check if msg is ack " << msg << endl;
     return msg[0] == '1';
 }
 

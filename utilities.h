@@ -12,6 +12,12 @@ using namespace std;
 
 /**
  * This is the message structure.
+ * ########################
+ * ## VERY CAREFUL HERE! ##
+ * ########################
+ *
+ * proc_number is always the sender of the message, not the receiver!!
+ *
  */
 struct message  {
     bool ack;
