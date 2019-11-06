@@ -27,6 +27,16 @@
 
 using namespace std;
 
+
+extern mutex mtx_receiver, mtx_sender, mtx_acks;
+extern condition_variable cv_receiver;
+extern queue<message> incoming_messages;
+
+extern queue<pair<int,message>> outgoing_messages;
+
+extern vector<vector<bool>> acks;
+
+
 /**
  * Run sender: it is run by a single thread,
  * creates a socket which will periodically try to send a message to
@@ -35,7 +45,7 @@ using namespace std;
  * timer_killer object, which stops the sender thread
  * @param socket_by_process_id the map from process number to destination address.
  */
-void run_sender(unordered_map<int, pair<string, int>> socket_by_process_id);
+void run_sender(unordered_map<int, pair<string, int>> socket_by_process_id, int sockfd);
 
 
 extern vector<vector<bool>> acks;
@@ -62,6 +72,6 @@ public:
  */
 void send_ack(message m, Link* link);
 
-void run_receiver(string ip_address, int port, Link* link);
+void run_receiver(int sockfd);
 
 #endif //DISTRIBUTEDALGORITHMS2019_MANAGER_H

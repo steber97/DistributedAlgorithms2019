@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     int total_number_of_messages = input_data.first;
 
     // Resize the number of acks
-    acks.resize(total_number_of_processes+1, vector<bool>(total_number_of_messages+1));
+    acks.resize(total_number_of_processes+1, vector<bool>(total_number_of_messages+1, false));
 
 	// the condition variable matrix has a conditional variable
     Link link(process_number, input_data.second);
@@ -94,18 +94,15 @@ int main(int argc, char** argv) {
         }
     }
 
-    vector<vector<bool>> messages_received(total_number_of_processes+1, vector<bool>(total_number_of_messages+1, false));
-    int total_messages_received = 0;
-    while(total_messages_received != (total_number_of_messages * (total_number_of_processes-1) )){
+    vector<vector<bool>> messages_acked(total_number_of_processes+1, vector<bool>(total_number_of_messages+1, false));
+    int total_messages_acked = 0;
+    while(true){
         message m = link.get_next_message();
-        if (!messages_received[m.proc_number][m.seq_number]){
+        mtx_acks.lock();
 
-            total_messages_received ++;
-            messages_received[m.proc_number][m.seq_number] = true;
-        }
+        mtx_acks.unlock();
     }
 
-    cout << "Finally, we must have got " << total_messages_received << endl;
 
     while(1) {
 		struct timespec sleep_time;
