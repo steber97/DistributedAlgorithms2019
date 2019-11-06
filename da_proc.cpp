@@ -5,7 +5,7 @@
 #include <iostream>
 #include "Link.h"
 #include "utilities.h"
-#include "UniformBroadcast.h"
+#include "Broadcast.h"
 
 using namespace std;
 
@@ -60,8 +60,25 @@ int main(int argc, char** argv) {
     int number_of_processes = input_data.second->size();
     int number_of_messages = input_data.first;
 
-	// the condition variable matrix has a conditional variable
-    Link link(process_number, input_data.second);
+    int sockfd;
+    string ip_address = (*input_data.second)[process_number].first;
+    int port = (*input_data.second)[process_number].second;
+    // Creating socket file descriptor
+    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        cerr << "socket creation failed but maybe recovery";
+    }
+    memset(&(sock), 0, sizeof(sock));
+    sock.sin_family = AF_INET; // IPv4
+    inet_pton(AF_INET, ip_address.c_str(), &(sock.sin_addr));
+    sock.sin_port = port;
+    if ( bind(sockfd, (const struct sockaddr *)&(sock),
+              sizeof(sock)) < 0 ) {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
+
+    Link* link = new Link(sockfd, process_number, input_data.second);
+    Broadcast* broadcast = new Broadcast(link, number_of_processes, number_of_messages);
 
     //wait until start signal
 	while(wait_for_start) {
@@ -71,9 +88,9 @@ int main(int argc, char** argv) {
 		nanosleep(&sleep_time, NULL);
 	}
 
-    link.init();
+    link->init();
+	broadcast->init();
 
-	UniformBroadcast urb(&link, number_of_processes, number_of_messages);
 
 	cout << "init finished" << endl;
 
@@ -86,11 +103,8 @@ int main(int argc, char** argv) {
         msg.seq_number = i;
         msg.proc_number = process_number;
         msg.payload = to_string(i);
-        urb.urb_broadcast(msg);
+        broadcast->urb_broadcast(msg);
     }
-
-
-
 
 	/*
 
@@ -104,20 +118,19 @@ int main(int argc, char** argv) {
                 m.proc_number = link.process_number;
                 m.payload = "";
                 //cout << "Send message " << m.seq_number << " to process " << m.proc_number << endl;
-                link.send_to(i, m);
+                link.send_to(i, m, sockfd);
             }
         }
     }
 
     vector<vector<bool>> messages_received(number_of_processes+1, vector<bool>(number_of_messages+1, false));
     int total_messages_received = 0;
+<<<<<<< HEAD
     while(total_messages_received != (number_of_messages * (number_of_processes-1) )){
-        message m = link.get_next_message();
-        if (!messages_received[m.proc_number][m.seq_number]){
-
-            total_messages_received ++;
-            messages_received[m.proc_number][m.seq_number] = true;
-        }
+=======
+    while(true){
+>>>>>>> c093ffeb64cf1b0aed94dbc734313aeb1da0c6c9
+        message m = link.pp2p_deliver();
     }
 
     cout << "Finally, we must have got " << total_messages_received << endl;
@@ -131,4 +144,22 @@ int main(int argc, char** argv) {
 
 	 */
 
+}
+
+void run_deliverer(Link* link, int number_of_processes){
+    vector<int> delivered(number_of_processes, 0);
+    while(true) {
+        message msg = link->get_next_message();
+        if (msg.ack) {
+            // we received an ack;
+            cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
+            timer_killer_by_process_message[msg.proc_number][msg.seq_number].kill();
+        } else {
+            link->send_ack(msg.proc_number, msg.seq_number);
+            if (delivered[msg.proc_number] < msg.seq_number) {
+                link->pp2p_deliver(msg);
+                delivered[msg.proc_number] = msg.seq_number;
+            }
+        }
+    }
 }
