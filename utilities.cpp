@@ -28,6 +28,7 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
 
 
 message parse_message(string str) {
+    cout << str << endl;
     size_t current, previous = 0;
     vector<string> cont;
     char delim = '-';
@@ -66,5 +67,8 @@ void ack_received(string msg){
     //TODO sets the correspondig ack to true
 
 }
+
+
+
 
 

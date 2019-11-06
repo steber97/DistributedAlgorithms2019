@@ -23,7 +23,8 @@ void UniformBroadcast::init() {
 void UniformBroadcast::beb_broadcast(message &msg) {
     for (int process: processes) {
         if (process != link->get_process_number())
-            link->send_to(process, msg);
+            // TODO: NEed to edit it!
+            link->send_to(process, msg, 0);
     }
 }
 

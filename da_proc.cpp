@@ -75,7 +75,10 @@ int main(int argc, char** argv) {
 
 	cout << "init" << endl;
 
-	link.init();
+	// setup the socket
+    int sockfd = setup_socket(&link);
+    link.sockfd = sockfd;
+    link.init(sockfd);
 
 	//broadcast messages
 	printf("Broadcasting messages.\n");
@@ -90,20 +93,15 @@ int main(int argc, char** argv) {
                 m.proc_number = link.process_number;
                 m.payload = "";
                 //cout << "Send message " << m.seq_number << " to process " << m.proc_number << endl;
-                link.send_to(i, m);
+                link.send_to(i, m, sockfd);
             }
         }
     }
 
     vector<vector<bool>> messages_received(total_number_of_processes+1, vector<bool>(total_number_of_messages+1, false));
     int total_messages_received = 0;
-    while(total_messages_received != (total_number_of_messages * (total_number_of_processes-1) )){
+    while(true){
         message m = link.get_next_message();
-        if (!messages_received[m.proc_number][m.seq_number]){
-
-            total_messages_received ++;
-            messages_received[m.proc_number][m.seq_number] = true;
-        }
     }
 
     cout << "Finally, we must have got " << total_messages_received << endl;
