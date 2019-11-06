@@ -11,7 +11,7 @@ using namespace std;
 class UniformBroadcast {
 private:
     Link *link;
-    vector<int> processes;
+    int number_of_processes;
     int number_of_messages;
     unordered_set<int> *delivered;
     unordered_set<int> *forward;
@@ -23,12 +23,12 @@ private:
     bool forward_locked, delivered_locked, acks_locked;
 
 public:
-    UniformBroadcast(Link *link, vector<int> &processes, int number_of_messages);
+    UniformBroadcast(Link *link, int number_of_processes, int number_of_messages);
     void init();
     void beb_broadcast(message &msg);
-    void ur_broadcast(message &msg);
+    void urb_broadcast(message &msg);
     void beb_deliver(message &msg);
-    void ur_deliver(int m_seq_number);
+    void urb_deliver(int m_seq_number);
     unordered_set<int> * forwarded_messages();
     bool is_delivered(int m_seq_number);
     int acks_received(int m_seq_number);

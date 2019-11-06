@@ -2,12 +2,10 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <time.h>
-#include <thread>
 #include <iostream>
-
 #include "Link.h"
 #include "utilities.h"
-#include "TimerKiller.h"
+#include "UniformBroadcast.h"
 
 using namespace std;
 
@@ -59,8 +57,8 @@ int main(int argc, char** argv) {
 	// input data contains both the number of messages to send per each process,
 	// and the mapping among processes and ip/port
 	pair<int, unordered_map<int, pair<string, int>>*> input_data = parse_input_data(membership_file);
-    int total_number_of_processes = input_data.second->size();
-    int total_number_of_messages = input_data.first;
+    int number_of_processes = input_data.second->size();
+    int number_of_messages = input_data.first;
 
 	// the condition variable matrix has a conditional variable
     Link link(process_number, input_data.second);
@@ -73,17 +71,33 @@ int main(int argc, char** argv) {
 		nanosleep(&sleep_time, NULL);
 	}
 
-	cout << "init" << endl;
+    link.init();
 
-	link.init();
+	UniformBroadcast urb(&link, number_of_processes, number_of_messages);
 
-	//broadcast messages
-	printf("Broadcasting messages.\n");
+	cout << "init finished" << endl;
+
+    //broadcast messages
+    printf("Broadcasting messages.\n");
+
+    for (int i = 1; i <= number_of_messages; i++) {
+        message msg;
+        msg.ack = false;
+        msg.seq_number = i;
+        msg.proc_number = process_number;
+        msg.payload = to_string(i);
+        urb.urb_broadcast(msg);
+    }
+
+
+
+
+	/*
 
 	// Try to send a lot of messages at the time.
-	for (int i = 1; i<=total_number_of_processes; i++){
+	for (int i = 1; i<=number_of_processes; i++){
         if (i != process_number){
-            for (int j = 1; j<=total_number_of_messages; j++) {
+            for (int j = 1; j<=number_of_messages; j++) {
                 message m;
                 m.ack = false;
                 m.seq_number = j;
@@ -95,9 +109,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    vector<vector<bool>> messages_received(total_number_of_processes+1, vector<bool>(total_number_of_messages+1, false));
+    vector<vector<bool>> messages_received(number_of_processes+1, vector<bool>(number_of_messages+1, false));
     int total_messages_received = 0;
-    while(total_messages_received != (total_number_of_messages * (total_number_of_processes-1) )){
+    while(total_messages_received != (number_of_messages * (number_of_processes-1) )){
         message m = link.get_next_message();
         if (!messages_received[m.proc_number][m.seq_number]){
 
@@ -114,5 +128,7 @@ int main(int argc, char** argv) {
 		sleep_time.tv_nsec = 0;
 		nanosleep(&sleep_time, NULL);
 	}
+
+	 */
 
 }

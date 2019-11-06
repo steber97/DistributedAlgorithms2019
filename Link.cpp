@@ -183,6 +183,8 @@ void run_receiver(string ip_address, int port, Link* link){
         message m;
         m = parse_message(string(buf));
 
+        cout << "\nNew message: " << m.seq_number << "\tfrom " << m.proc_number;
+
         // Put the message in the queue.
         unique_lock<mutex> lck(mtx_receiver);
         cv_receiver.wait(lck, [&] { return !queue_locked; });
