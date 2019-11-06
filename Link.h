@@ -21,6 +21,7 @@
 #include <condition_variable>
 
 #include "utilities.h"
+#include "TimerKiller.h"
 
 
 #define MAXLINE 1024
@@ -60,6 +61,7 @@ public:
     void send_to(int d_process_number, message& msg);
     unordered_map<int, pair<string, int>> socket_by_process_id;
     int process_number;
+    int sockfd;     // TODO: see where to initialize it properly, now it is in link->init().
 };
 
 /**
@@ -72,6 +74,6 @@ public:
  */
 void send_ack(message m, Link* link);
 
-void run_receiver(int sockfd);
+void run_receiver(int sockfd, Link link);
 
 #endif //DISTRIBUTEDALGORITHMS2019_MANAGER_H

@@ -2,7 +2,7 @@
 
 init_time=2
 time_to_finish=20
-number_of_processes=3
+number_of_processes=25
 
 # start 5 processes, each broadcasting 100 messages
 for i in `seq 1 $number_of_processes`

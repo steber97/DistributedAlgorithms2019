@@ -7,7 +7,6 @@
 
 #include "Link.h"
 #include "utilities.h"
-#include "TimerKiller.h"
 
 using namespace std;
 
@@ -41,6 +40,7 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
+    cout << "Done done done" << endl;
     //set signal handlers
     signal(SIGUSR2, start);
     signal(SIGTERM, stop);
@@ -98,9 +98,6 @@ int main(int argc, char** argv) {
     int total_messages_acked = 0;
     while(true){
         message m = link.get_next_message();
-        mtx_acks.lock();
-
-        mtx_acks.unlock();
     }
 
 
