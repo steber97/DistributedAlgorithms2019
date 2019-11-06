@@ -38,11 +38,11 @@ message parse_message(string str) {
         current = str.find(delim, previous);
     }
     cont.push_back(str.substr(previous, current - previous));
+    bool ack = stoi(cont[0]);
+    int proc_number = stoi(cont[1]);
+    int seq_number = stoi(cont[2]);
 
-    message m;
-    m.ack = bool(stoi(cont[0]));
-    m.proc_number = stoi(cont[1]);
-    m.seq_number = stoi(cont[2]);
+    message m(ack, seq_number, proc_number, "") ;
 
     return m;
 }
@@ -68,3 +68,6 @@ void ack_received(string msg){
 }
 
 
+string create_message(message msg){
+    return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number);
+}

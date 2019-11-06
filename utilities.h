@@ -24,6 +24,14 @@ struct message  {
     int seq_number;
     int proc_number;
     string payload;
+
+    message(bool ack, int seq_number, int proc_number, string payload){
+        // Constructor.
+        this->ack = ack;
+        this->seq_number = seq_number;
+        this->proc_number = proc_number;
+        this->payload = payload;
+    }
 };
 
 /**
@@ -42,6 +50,8 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
 bool is_ack(string msg);
 void ack_received(string msg);
 int unique_id(message &msg);
+
+string create_message(message msg);
 
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 

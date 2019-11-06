@@ -62,6 +62,9 @@ int main(int argc, char** argv) {
     int total_number_of_processes = input_data.second->size();
     int total_number_of_messages = input_data.first;
 
+    // Resize the number of acks
+    acks.resize(total_number_of_processes+1, vector<bool>(total_number_of_messages+1));
+
 	// the condition variable matrix has a conditional variable
     Link link(process_number, input_data.second);
 
@@ -84,12 +87,8 @@ int main(int argc, char** argv) {
 	for (int i = 1; i<=total_number_of_processes; i++){
         if (i != process_number){
             for (int j = 1; j<=total_number_of_messages; j++) {
-                message m;
-                m.ack = false;
-                m.seq_number = j;
-                m.proc_number = link.process_number;
-                m.payload = "";
-                //cout << "Send message " << m.seq_number << " to process " << m.proc_number << endl;
+                message m(false, j, link.process_number, "");
+                cout << "Send message " << m.seq_number << " to process " << i << endl;
                 link.send_to(i, m);
             }
         }
