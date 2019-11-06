@@ -142,7 +142,7 @@ void run_sender(unordered_map<int, pair<string, int>> socket_by_process_id, int 
             mtx_sender.unlock();
         }
         // wait a bit before sending the new message.
-        usleep(1000);
+        usleep(100);
     }
     //cout << "Received ack for " << sequence_number << ", stop sending! :)" << endl;
 }
