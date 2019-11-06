@@ -48,24 +48,11 @@ message parse_message(string str) {
 }
 
 
-int unique_id(message &msg, int number_of_messages) {
-    return (msg.proc_number - 1) * number_of_messages + msg.seq_number;
+string to_string(message msg){
+    return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number);
 }
 
 
-bool is_ack(string msg){
-    /**
-     * a message is an ack if the first bit is 1
-     * if it is a message, the first bit is 0.
-     */
-    return msg[0] == '1';
-}
-
-
-void ack_received(string msg){
-    //TODO sets the correspondig ack to true
-
-}
 
 
 string create_message(message msg){
