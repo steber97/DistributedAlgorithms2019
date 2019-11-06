@@ -1,75 +1,101 @@
 #include "Link.h"
-#include "utilities.h"
-#include "TimerKiller.h"
 
 //to handle concurrency on the incoming_messages queue between the manager of the link and the receiver
 bool queue_locked = false;
-mutex mtx_receiver;
+mutex mtx_receiver, mtx_sender, mtx_acks;
 condition_variable cv_receiver;
 queue<message> incoming_messages;
-struct sockaddr_in sock;
+
+queue<pair<int,message>> outgoing_messages;
+
+vector<vector<bool>> acks;
 
 
-Link::Link(int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id) {
+Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id) {
+    this->sockfd = sockfd;
     this->process_number = process_number;
-    this->socket_by_process_id = *socket_by_process_id;
+    this->socket_by_process_id = socket_by_process_id;
 }
 
 
-void Link::init(int sockfd) {
-
-    thread t_rec(run_receiver, this->socket_by_process_id[this->process_number].first,
-            this->socket_by_process_id[this->process_number].second, this, sockfd);
+void Link::init() {
+    thread t_rec(run_receiver, this);
+    thread t_send(run_sender, this->socket_by_process_id, this->sockfd);
     t_rec.detach();
+    t_send.detach();
 }
 
 
-/**
- * Format of messages:
- * - 1 bit for ack: 0 normal message, 1 ack.
- * @param d_process_number destination address.
- * @param msg the message to send
- * @param sequence_number the sequence number of the message.
- */
-void Link::send_to(int d_process_number, message& msg, int sockfd) {
-
-    string message =
-            (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number);
-    cout << "in send to " << message << endl;
-    thread t_rec(run_sender, message, this->socket_by_process_id[d_process_number].first,
-                 this->socket_by_process_id[d_process_number].second, d_process_number,
-                 msg.seq_number, sockfd);
-    t_rec.detach();
+int Link::get_sockfd(){
+    return this->sockfd;
 }
+
 
 int Link::get_process_number() {
     return this->process_number;
 }
 
 
+/**
+ * Format of messages:
+ * - 1 bit for ack: 0 normal message, 1 ack.
+ *
+ * This method only puts the message in the queue of outgoing messages, so that the sender can send it.
+ * @param d_process_number destination address.
+ * @param msg the message to send
+ * @param sequence_number the sequence number of the message.
+ */
+void Link::send_to(int d_process_number, message& msg) {
+    // At the moment, we keep a queue of messages to send and not acked yet.
+    // Sending a message consist easily in putting a new message in the queue, and
+    // wait until the run_sender method sends it.
+    mtx_sender.lock();
+    outgoing_messages.push({d_process_number, msg});
+    mtx_sender.unlock();
+}
+
+
+void Link::send_ack(message msg) {
+    // Create the ack string (1-source process-sequence number of message to ack)
+    int source_process = process_number;
+    int dest_process = msg.proc_number;
+    message ack_message(true, msg.seq_number, source_process, "");
+    cout << "Sending the ack from " << source_process << " to " << dest_process << " with seq " << ack_message.seq_number << endl;
+
+    struct sockaddr_in d_addr;
+
+    memset(&d_addr, 0, sizeof(d_addr));
+    d_addr.sin_family = AF_INET;
+    d_addr.sin_port = (*socket_by_process_id)[dest_process].second;
+    string ip_address = (*socket_by_process_id)[dest_process].first;
+    // wrong line here
+    inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
+    string message_to_send = to_string(ack_message);
+    sendto(sockfd, message_to_send.c_str(), strlen(message_to_send.c_str()),
+           MSG_CONFIRM, (const struct sockaddr *) &d_addr,
+           sizeof(d_addr));
+
+}
+
+
 message Link::get_next_message(){
     while(true){
+        cout << "waiting for next message" << endl;
         unique_lock<mutex> lck(mtx_receiver);
+        //TODO correggere errore sulla concorrenza
         cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
         queue_locked = true;
-        message m = incoming_messages.front();
+        message msg = incoming_messages.front();
         incoming_messages.pop();
         queue_locked = false;
         cv_receiver.notify_one();
-
-        cout << "in get next message" << endl;
-        if (m.ack){
-            // we received an ack;
-            cout << "Received ack :) " << m.proc_number << " " << m.seq_number << endl;
-            timer_killer_by_process_message[m.proc_number][m.seq_number].kill();
-        }
-        else{
-            pair<string, int> dest = this->socket_by_process_id[m.proc_number];
-            send_ack(dest.first, dest.second, this->process_number, m.seq_number, this->sockfd);
-            return m;
-        }
-
+        return msg;
     }
+}
+
+
+void Link::pp2p_deliver(message msg){
+    cout << "pp2p delivery di: " << msg.seq_number << " da " << msg.proc_number;
 }
 
 /**
@@ -85,59 +111,55 @@ message Link::get_next_message(){
  *              receive the notification by the receiver about the ack receival)
  * @param sequence_number the sequence number of the message.
  */
-void run_sender(string msg, string ip_address, int port, int destination_process, int sequence_number, int sockfd){
+/**
+
+ */
+void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int sockfd){
+    //TODO rivedere concorrenza qui
     struct sockaddr_in d_addr;
-    // Create a socket. Better: try to use the existing one!
-//    int sockfd;
-//    // Creating socket file descriptor
-//    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-//        cerr << "socket creation failed but maybe recovering";
-//    }
+    while(true){
+        mtx_sender.lock();
+        if (!outgoing_messages.empty()){
+            pair<int,message> dest_and_msg = outgoing_messages.front();
+            outgoing_messages.pop();
+            // cout << "size of queue " << outgoing_messages.size() << endl;
+            mtx_sender.unlock();
 
-    memset(&d_addr, 0, sizeof(d_addr));
-    d_addr.sin_family = AF_INET;
-    d_addr.sin_port = port;
-    // wrong line here
-    inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
+            mtx_acks.lock();
+            if (!acks[dest_and_msg.first][dest_and_msg.second.seq_number]) {
+                // Send only if the ack hasn't been received
+                mtx_acks.unlock();
+                string msg_s = to_string(dest_and_msg.second);
+                const char *msg_c = msg_s.c_str();
 
-    bool keep_sending = true;
-    while(keep_sending){
-        const char* message = msg.c_str();
-        sendto(sockfd, message, strlen(message),
-               MSG_CONFIRM, (const struct sockaddr *) &d_addr,
-               sizeof(d_addr));
-        keep_sending = timer_killer_by_process_message[destination_process][sequence_number].wait_for(std::chrono::milliseconds(1000));
+                memset(&d_addr, 0, sizeof(d_addr));
+                d_addr.sin_family = AF_INET;
+                d_addr.sin_port = (*socket_by_process_id)[dest_and_msg.first].second;
+                string ip_address = (*socket_by_process_id)[dest_and_msg.first].first;
+                // wrong line here
+                inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
+
+                sendto(sockfd, msg_c, strlen(msg_c),
+                       MSG_CONFIRM, (const struct sockaddr *) &d_addr,
+                       sizeof(d_addr));
+                // cout << "Sent " << msg_c << " to " << dest_and_msg.first << endl;
+                if (!dest_and_msg.second.ack){
+                    mtx_sender.lock();
+                    outgoing_messages.push(dest_and_msg);
+                    mtx_sender.unlock();
+                }
+            }
+            else{
+                mtx_acks.unlock();
+            }
+        }
+        else{
+            mtx_sender.unlock();
+        }
+        // wait a bit before sending the new message.
+        usleep(1000);
     }
     //cout << "Received ack for " << sequence_number << ", stop sending! :)" << endl;
-}
-
-
-/**
- * Sends ack message,
- * it is triggered whenever a normal message is received.
- * @param ip_address ip address where to send the ack
- * @param port the port where to send the acks
- * @param s_process_number process number of the source (which has to be reported in the ack message)
- * @param sequence_number the sequence number of the message we are acking.
- */
-void send_ack(string ip_address, int port, int s_process_number, int sequence_number, int sockfd) {
-    // TODO: Use right socket even here!
-    struct sockaddr_in d_addr;
-    memset(&d_addr, 0, sizeof(d_addr));
-    d_addr.sin_family = AF_INET;
-    d_addr.sin_port = port;
-    // wrong line here
-    inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
-
-    // Create the ack string (1-source process-sequence number of message to ack)
-    string msg = "1-" + to_string(s_process_number) + "-" + to_string(sequence_number);
-
-    cout << "Send ack " << msg << endl;
-    const char *message = msg.c_str();
-    sendto(sockfd, message, strlen(message),
-           MSG_CONFIRM, (const struct sockaddr *) &d_addr,
-           sizeof(d_addr));
-
 }
 
 
@@ -152,50 +174,30 @@ void send_ack(string ip_address, int port, int s_process_number, int sequence_nu
  * @param port  the receiver port
  * @param link  the link object
  */
-void run_receiver(string ip_address, int port, Link *link, int sockfd) {
-
-
+void run_receiver(Link *link) {
     while(true){
         unsigned int len;
         char buf[1024];
         struct sockaddr_in sender_addr;
-        int n = recvfrom(sockfd, (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
+        int n = recvfrom(link->get_sockfd(), (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
                          &len);
         buf[n] = '\0';
         cout << "received " << buf << endl;
-        message m;
-        m = parse_message(string(buf));
+        message msg;
+        msg = parse_message(string(buf));
 
-        cout << "\nNew message: " << m.seq_number << "\tfrom " << m.proc_number;
+        cout << "\nNew message: " << msg.seq_number << "\tfrom " << msg.proc_number;
 
         // Put the message in the queue.
         unique_lock<mutex> lck(mtx_receiver);
         cv_receiver.wait(lck, [&] { return !queue_locked; });
-        incoming_messages.push(m);
+        queue_locked = true;
+        incoming_messages.push(msg);
+        queue_locked = false;
         cv_receiver.notify_one();
     }
 }
 
-int setup_socket(Link* link){
 
-    cout << "socket creation" << endl;
-    int sockfd;
-    string ip_address = link->socket_by_process_id[link->process_number].first;
-    int port = link->socket_by_process_id[link->process_number].second;
-    // Creating socket file descriptor
-    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-        cerr << "socket creation failed but maybe recovery";
-    }
-    memset(&(sock), 0, sizeof(sock));
-    sock.sin_family = AF_INET; // IPv4
-    inet_pton(AF_INET, ip_address.c_str(), &(sock.sin_addr));
-    sock.sin_port = port;
-    if ( bind(sockfd, (const struct sockaddr *)&(sock),
-              sizeof(sock)) < 0 ) {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
-    }
 
-    return sockfd;
-}
 

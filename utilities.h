@@ -24,6 +24,21 @@ struct message  {
     int seq_number;
     int proc_number;
     string payload;
+
+    message(){
+        this->ack = false;
+        this->seq_number = 0;
+        this->proc_number = 0;
+        this->payload = "";
+    }
+
+    message(bool ack, int seq_number, int proc_number, string payload){
+        // Constructor.
+        this->ack = ack;
+        this->seq_number = seq_number;
+        this->proc_number = proc_number;
+        this->payload = payload;
+    }
 };
 
 /**
@@ -39,9 +54,7 @@ message parse_message(string msg);
 
 pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membership_file);
 
-bool is_ack(string msg);
-void ack_received(string msg);
-int unique_id(message &msg);
+string to_string(message msg);
 
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 

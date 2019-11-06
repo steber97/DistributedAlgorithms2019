@@ -31,6 +31,24 @@ static void stop(int signum) {
 	exit(0);
 }
 
+void run_deliverer(Link* link, int number_of_processes){
+    vector<int> delivered(number_of_processes, 0);
+    while(true) {
+        message msg = link->get_next_message();
+        if (msg.ack) {
+            // we received an ack;
+            cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
+            timer_killer_by_process_message[msg.proc_number][msg.seq_number].kill();
+        } else {
+            link->send_ack(msg);
+            if (delivered[msg.proc_number] < msg.seq_number) {
+                link->pp2p_deliver(msg);
+                delivered[msg.proc_number] = msg.seq_number;
+            }
+        }
+    }
+}
+
 int main(int argc, char** argv) {
 
     if (argc != 3){
@@ -60,6 +78,7 @@ int main(int argc, char** argv) {
     int number_of_processes = input_data.second->size();
     int number_of_messages = input_data.first;
 
+    struct sockaddr_in sock;
     int sockfd;
     string ip_address = (*input_data.second)[process_number].first;
     int port = (*input_data.second)[process_number].second;
@@ -80,6 +99,8 @@ int main(int argc, char** argv) {
     Link* link = new Link(sockfd, process_number, input_data.second);
     Broadcast* broadcast = new Broadcast(link, number_of_processes, number_of_messages);
 
+    thread t_del(run_deliverer, link, number_of_processes);
+
     //wait until start signal
 	while(wait_for_start) {
 		struct timespec sleep_time;
@@ -90,6 +111,8 @@ int main(int argc, char** argv) {
 
     link->init();
 	broadcast->init();
+
+
 
 
 	cout << "init finished" << endl;
@@ -106,6 +129,7 @@ int main(int argc, char** argv) {
         broadcast->urb_broadcast(msg);
     }
 
+    usleep(20000000);
 	/*
 
 	// Try to send a lot of messages at the time.
@@ -144,22 +168,4 @@ int main(int argc, char** argv) {
 
 	 */
 
-}
-
-void run_deliverer(Link* link, int number_of_processes){
-    vector<int> delivered(number_of_processes, 0);
-    while(true) {
-        message msg = link->get_next_message();
-        if (msg.ack) {
-            // we received an ack;
-            cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
-            timer_killer_by_process_message[msg.proc_number][msg.seq_number].kill();
-        } else {
-            link->send_ack(msg.proc_number, msg.seq_number);
-            if (delivered[msg.proc_number] < msg.seq_number) {
-                link->pp2p_deliver(msg);
-                delivered[msg.proc_number] = msg.seq_number;
-            }
-        }
-    }
 }

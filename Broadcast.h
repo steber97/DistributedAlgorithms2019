@@ -1,5 +1,5 @@
-#ifndef DISTRIBUTED_ALGORITHMS_UNIFORMBROADCAST_H
-#define DISTRIBUTED_ALGORITHMS_UNIFORMBROADCAST_H
+#ifndef DISTRIBUTED_ALGORITHMS_BROADCAST_H
+#define DISTRIBUTED_ALGORITHMS_BROADCAST_H
 
 #include <unordered_set>
 
@@ -8,7 +8,7 @@
 
 using namespace std;
 
-class UniformBroadcast {
+class Broadcast {
 private:
     Link *link;
     int number_of_processes;
@@ -23,7 +23,7 @@ private:
     bool forward_locked, delivered_locked, acks_locked;
 
 public:
-    UniformBroadcast(Link *link, int number_of_processes, int number_of_messages);
+    Broadcast(Link *link, int number_of_processes, int number_of_messages);
     void init();
     void beb_broadcast(message &msg);
     void urb_broadcast(message &msg);
@@ -36,6 +36,6 @@ public:
     void addDelivered(int m_seq_number);
 };
 
-void handle_delivery(UniformBroadcast* urb);
+void handle_delivery(Broadcast* urb);
 
-#endif //DISTRIBUTED_ALGORITHMS_UNIFORMBROADCAST_H
+#endif //DISTRIBUTED_ALGORITHMS_BROADCAST_H
