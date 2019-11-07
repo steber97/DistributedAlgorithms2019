@@ -37,12 +37,13 @@ void run_deliverer(Link* link, int number_of_processes){
         message msg = link->get_next_message();
         if (msg.ack) {
             // we received an ack;
-            cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
+            // cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
             mtx_acks.lock();
             acks[msg.proc_number][msg.seq_number] = true;
             mtx_acks.unlock();;
         } else {
             link->send_ack(msg);
+            //todo messaggi non necessariamente in ordine
             if (delivered[msg.proc_number] < msg.seq_number) {
                 link->pp2p_deliver(msg);
                 delivered[msg.proc_number] = msg.seq_number;
@@ -118,33 +119,30 @@ int main(int argc, char** argv) {
     link->init();
 	broadcast->init();
 
-	cout << "init finished" << endl;
-//
-//    //broadcast messages
-//    printf("Broadcasting messages.\n");
-//
-//    for (int i = 1; i <= number_of_messages; i++) {
-//        message msg;
-//        msg.ack = false;
-//        msg.seq_number = i;
-//        msg.proc_number = process_number;
-//        msg.payload = to_string(i);
-//        broadcast->urb_broadcast(msg);
-//    }
-//
-//    usleep(20000000);
+    //broadcast messages
+    printf("Broadcasting messages.\n");
 
-
-	// Try to send a lot of messages at the time.
-	for (int i = 1; i<=number_of_processes; i++){
-        if (i != process_number){
-            for (int j = 1; j<=number_of_messages; j++) {
-                message m(false, j, link->get_process_number(), "");
-                cout << "Send message " << m.seq_number << " to process " << i << endl;
-                link->send_to(i, m);
-            }
-        }
+    for (int i = 1; i <= number_of_messages; i++) {
+        message msg;
+        msg.ack = false;
+        msg.seq_number = i;
+        msg.proc_number = process_number;
+        msg.payload = to_string(i);
+        broadcast->beb_broadcast(msg);
     }
+
+    usleep(20000000);
+
+//  Test Perfect Link
+//	// Try to send a lot of messages at the time.
+//	for (int i = 1; i<=number_of_processes; i++){
+//        if (i != process_number){
+//            for (int j = 1; j<=number_of_messages; j++) {
+//                message m(false, j, link->get_process_number(), "");
+//                link->send_to(i, m);
+//            }
+//        }
+//    }
 
     while(1) {
 		struct timespec sleep_time;

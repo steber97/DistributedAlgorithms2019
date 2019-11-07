@@ -60,7 +60,6 @@ void Link::send_ack(message msg) {
     int source_process = process_number;
     int dest_process = msg.proc_number;
     message ack_message(true, msg.seq_number, source_process, "");
-    cout << "Sending the ack from " << source_process << " to " << dest_process << " with seq " << ack_message.seq_number << endl;
 
     struct sockaddr_in d_addr;
 
@@ -80,7 +79,6 @@ void Link::send_ack(message msg) {
 
 message Link::get_next_message(){
     while(true){
-        cout << "waiting for next message" << endl;
         unique_lock<mutex> lck(mtx_receiver);
         //TODO correggere errore sulla concorrenza
         cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
@@ -95,7 +93,7 @@ message Link::get_next_message(){
 
 
 void Link::pp2p_deliver(message msg){
-    cout << "pp2p delivery di: " << msg.seq_number << " da " << msg.proc_number;
+    cout << "\npp2p delivery di: [pn=" << msg.proc_number << ", sn=" << msg.seq_number << "] by process " << process_number << endl;
 }
 
 
@@ -140,9 +138,8 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
             mtx_sender.unlock();
         }
         // wait a bit before sending the new message.
-        usleep(1000);
+        usleep(10000);
     }
-    //cout << "Received ack for " << sequence_number << ", stop sending! :)" << endl;
 }
 
 
@@ -154,10 +151,10 @@ void run_receiver(Link *link) {
         int n = recvfrom(link->get_sockfd(), (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
                          &len);
         buf[n] = '\0';
-        cout << "received " << buf << " by " << link->get_process_number() << endl;
+
         message msg = parse_message(string(buf));
 
-        cout << "\nNew message: " << msg.seq_number << "\tfrom " << msg.proc_number;
+        cout << "\nNew message: [pn=" << msg.proc_number << ", sn=" << msg.seq_number << "] by process " << link->get_process_number() << endl;
 
         // Put the message in the queue.
         unique_lock<mutex> lck(mtx_receiver);

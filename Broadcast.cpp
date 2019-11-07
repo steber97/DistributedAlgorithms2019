@@ -21,7 +21,7 @@ void Broadcast::init() {
 
 
 void Broadcast::beb_broadcast(message &msg) {
-    for (int i = 1; i <= number_of_processes + 1; i++) {
+    for (int i = 1; i <= number_of_processes; i++) {
         if (number_of_processes != link->get_process_number())
             link->send_to(i, msg);
     }
