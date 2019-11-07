@@ -45,7 +45,7 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
  * @param str
  * @return
  */
-message parse_message(string str) {
+pp2p_message parse_message(string str) {
     size_t current, previous = 0;
     vector<string> cont_outer;
     char delim_outer = '/';
@@ -91,10 +91,12 @@ message parse_message(string str) {
     int sender = stoi(cont2[0]);
     int seq_number_broad = stoi(cont2[1]);
 
-    broadcast_message bm (seq_number_broad, sender);
-    message m(ack, proc_number, seq_number_pp2p, bm);
+    // parse the rcob_message
 
-    return m;
+    urb_message urb_msg (seq_number_broad, sender);
+    pp2p_message pp2p_msg(ack, proc_number, urb_msg);
+
+    return pp2p_msg;
 }
 
 
@@ -108,9 +110,9 @@ message parse_message(string str) {
  * @param msg
  * @return
  */
-string to_string(message msg){
+string to_string(pp2p_message msg){
     return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number)
-                + "/" + to_string(msg.payload.sender)
+                + "/" + to_string(msg.payload.first_sender)
                 + "-" + to_string(msg.payload.seq_number);
 }
 
@@ -119,7 +121,7 @@ string to_string(message msg){
  * Appends the broadcast log to the list of activities.
  * @param m the broadcast message to log
  */
-void broadcast_log(broadcast_message& m) {
+void broadcast_log(urb_message& m) {
     string log_msg = "b " + to_string(m.seq_number) ;
     mtx_log.lock();
     // Append the broadcast log message
@@ -135,8 +137,8 @@ void broadcast_log(broadcast_message& m) {
  * @param sender
  * @return
  */
-void delivery_log(broadcast_message& m) {
-    string log_msg = "d " + to_string(m.sender) + " " + to_string(m.seq_number);
+void delivery_log(urb_message& m) {
+    string log_msg = "d " + to_string(m.first_sender) + " " + to_string(m.seq_number);
     mtx_log.lock();
     log_actions.push_back(log_msg);
     mtx_log.unlock();

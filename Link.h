@@ -30,9 +30,9 @@ using namespace std;
 
 extern mutex mtx_receiver, mtx_sender, mtx_acks;
 extern condition_variable cv_receiver;
-extern queue<message> incoming_messages;
+extern queue<pp2p_message> incoming_messages;
 
-extern queue<pair<int,message>> outgoing_messages;
+extern queue<pair<int,pp2p_message>> outgoing_messages;
 
 /// Both acks and pl_delivered are indexed in this way:
 // the vector is indexed by the process number in the perfect link message
@@ -64,10 +64,10 @@ public:
     void init();
     int get_sockfd();
     int get_process_number();
-    void send_to(int d_process_number, message& msg);
-    void send_ack(message msg);
-    message get_next_message();
-    void pp2p_deliver(message msg);
+    void send_to(int d_process_number, pp2p_message& msg);
+    void send_ack(pp2p_message msg);
+    pp2p_message get_next_message();
+    void pp2p_deliver(pp2p_message msg);
 };
 
 void run_receiver(Link *link);

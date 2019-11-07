@@ -33,13 +33,4 @@ private:
     bool terminate = false;
 };
 
-/*
- * This data structure contains timer_killers for each possible sender,
- * ordered by process_number first, and then by (message) sequence_number
- */
-// TODO: very bad here dimension fixed!
-extern timer_killer timer_killer_by_process_message[1000][1000];
-// vector<timer_killer> myv;
-
-
 #endif //DISTRIBUTED_ALGORITHMS_TIMERKILLER_H

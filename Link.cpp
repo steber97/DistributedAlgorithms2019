@@ -4,8 +4,9 @@
 bool queue_locked = false;
 mutex mtx_receiver, mtx_sender, mtx_acks;
 condition_variable cv_receiver;
-queue<message> incoming_messages;
-queue<pair<int,message>> outgoing_messages;
+queue<pp2p_message> incoming_messages;
+
+queue<pair<int,pp2p_message>> outgoing_messages;
 
 vector<unordered_set<long long int>> acks;  // acks
 
@@ -49,9 +50,9 @@ int Link::get_process_number() {
  * @param d_process_number destination address.
  * @param msg the message to send
  */
-void Link::send_to(int d_process_number, message& msg) {
+void Link::send_to(int d_process_number, pp2p_message& msg) {
     // At the moment, we keep a queue of messages to send and not acked yet.
-    // Sending a message consist easily in putting a new message in the queue, and
+    // Sending a pp2p_message consist easily in putting a new pp2p_message in the queue, and
     // wait until the run_sender method sends it.
 
     // Before doing it, we must choose a proper sequence number.
@@ -63,12 +64,12 @@ void Link::send_to(int d_process_number, message& msg) {
 }
 
 
-void Link::send_ack(message msg) {
-    // Create the ack string (1-source process-sequence number of message to ack)
+void Link::send_ack(pp2p_message msg) {
+    // Create the ack string (1-source process-sequence number of pp2p_message to ack)
     int source_process = process_number;
     int dest_process = msg.proc_number;
 
-    message ack_message(true, source_process, msg.seq_number, msg.payload);
+    pp2p_message ack_message(true, source_process, msg.seq_number, msg.payload);
 
     struct sockaddr_in d_addr;
 
@@ -85,8 +86,8 @@ void Link::send_ack(message msg) {
 }
 
 
-void Link::pp2p_deliver(message msg){
-    cout << "\npp2p delivery di: [pn=" << msg.proc_number << "] by process " << process_number << endl;
+void Link::pp2p_deliver(pp2p_message msg){
+    cout << "\npp2p delivery di: [pn=" << msg.proc_number << ", sn=" << msg.seq_number << "] by process " << process_number << endl;
 }
 
 
@@ -96,12 +97,12 @@ void Link::pp2p_deliver(message msg){
  * It avoids duplicate messages.
  * @return the next new message.
  */
-message Link::get_next_message(){
+pp2p_message Link::get_next_message(){
     while(true){
         unique_lock<mutex> lck(mtx_receiver);
         cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
         queue_locked = true;
-        message msg = incoming_messages.front();
+        pp2p_message msg = incoming_messages.front();
         incoming_messages.pop();
         queue_locked = false;
         cv_receiver.notify_one();
@@ -125,12 +126,11 @@ message Link::get_next_message(){
 
 
 void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int sockfd) {
-    //TODO rivedere concorrenza qui
     struct sockaddr_in d_addr;
     while (true) {
         mtx_sender.lock();
         if (!outgoing_messages.empty()) {
-            pair<int, message> dest_and_msg = outgoing_messages.front();
+            pair<int, pp2p_message> dest_and_msg = outgoing_messages.front();
             outgoing_messages.pop();
             // cout << "size of queue " << outgoing_messages.size() << endl;
             mtx_sender.unlock();
@@ -179,7 +179,7 @@ void run_receiver(Link *link) {
                          &len);
         buf[n] = '\0';
 
-        message msg = parse_message(string(buf));
+        pp2p_message msg = parse_message(string(buf));
 
         // cout << "\nNew message: ack="<< msg.ack <<" [pn=" << msg.proc_number << ", snd=" << msg.payload.sender << ", seq=" << msg.payload.seq_number <<  "] by process " << link->get_process_number() << endl;
 

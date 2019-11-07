@@ -1,5 +1,8 @@
-
 #include "UrBroadcast.h"
+
+condition_variable cv_urb_delivering_queue;
+mutex mtx_urb_delivering_queue;
+bool urb_delivering_queue_locked = false;
 
 
 UrBroadcast::UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_of_messages) {
@@ -12,6 +15,7 @@ UrBroadcast::UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_o
     this->forward_locked = false;
     this->delivered_locked = false;
     this->acks_locked = false;
+    this->urb_delivering_queue = new queue<urb_message>;
 }
 
 
@@ -21,26 +25,32 @@ void UrBroadcast::init() {
 }
 
 
-void UrBroadcast::urb_broadcast(broadcast_message &msg) {
+void UrBroadcast::urb_broadcast(urb_message &msg) {
     forward->insert(msg.seq_number);
     beb->beb_broadcast(msg);
 }
 
-void UrBroadcast::urb_deliver(broadcast_message &msg) {
-    (*acks)[msg.seq_number - 1].insert(msg.sender);
-    if (forward->find(msg.seq_number) == forward->end()) {
-        forward->insert(msg.seq_number);
-        beb->beb_broadcast(msg);
-    }
+
+void UrBroadcast::urb_deliver(urb_message &msg) {
+    unique_lock<mutex> lck(mtx_urb_delivering_queue);
+    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue_locked; });
+    urb_delivering_queue_locked = true;
+    this->urb_delivering_queue->push(msg);
+    urb_delivering_queue_locked = false;
+    cv_urb_delivering_queue.notify_all();
 }
-//
-//void Broadcast::beb_deliver(message &msg) {
-//    (*acks)[msg.seq_number - 1].insert(msg.proc_number);
-//    if (forward->find(msg.seq_number) == forward->end()) {
-//        forward->insert(msg.seq_number);
-//        beb_broadcast(msg);
-//    }
-//}
+
+
+urb_message UrBroadcast::get_next_message() {
+    unique_lock<mutex> lck(mtx_urb_delivering_queue);
+    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue->empty(); });
+    urb_delivering_queue_locked = true;
+    urb_message next_message = this->urb_delivering_queue->front();
+    this->urb_delivering_queue->pop();
+    urb_delivering_queue_locked = false;
+    cv_urb_delivering_queue.notify_all();
+    return next_message;
+}
 
 
 unordered_set<int> *UrBroadcast::forwarded_messages() {
@@ -54,7 +64,7 @@ unordered_set<int> *UrBroadcast::forwarded_messages() {
 }
 
 
-bool UrBroadcast::is_delivered(broadcast_message &msg) {
+bool UrBroadcast::is_delivered(urb_message &msg) {
     unique_lock<mutex> lck(mtx_delivered);
     cv_delivered.wait(lck, [&] { return delivered_locked; });
     this->delivered_locked = true;
@@ -65,7 +75,7 @@ bool UrBroadcast::is_delivered(broadcast_message &msg) {
 }
 
 
-int UrBroadcast::acks_received(broadcast_message &msg) {
+int UrBroadcast::acks_received(urb_message &msg) {
     unique_lock<mutex> lck(mtx_acks);
     cv_acks.wait(lck, [&] { return acks_locked; });
     this->acks_locked = true;
@@ -76,7 +86,7 @@ int UrBroadcast::acks_received(broadcast_message &msg) {
 }
 
 
-void UrBroadcast::addDelivered(broadcast_message &msg) {
+void UrBroadcast::addDelivered(urb_message &msg) {
     unique_lock<mutex> lck(mtx_delivered);
     cv_delivered.wait(lck, [&] { return delivered_locked; });
     this->delivered_locked = true;
@@ -94,7 +104,7 @@ int UrBroadcast::get_number_of_processes() {
 void handle_delivery(UrBroadcast *urb) {
     /*
     //TODO lo fa periodicamente
-    for (broadcast_message b_msg: *urb->forwarded_messages()) {
+    for (urb_message b_msg: *urb->forwarded_messages()) {
         if (!urb->is_delivered(b_msg) && (urb->acks_received(b_msg) > (urb->get_number_of_processes() / 2 + 1))) {
             urb->addDelivered(b_msg);
             urb->urb_deliver(b_msg);

@@ -11,11 +11,29 @@
 
 using namespace std;
 
-
-
 extern mutex mtx_log;
 extern vector<string> log_actions;
 
+
+/**
+ * This is the message used at FIFO broadcast level
+ * It contains a vector of clocks and the actual content of the message
+ */
+struct rcob_message {
+    vector<int> clocks;
+    string payload;
+
+    rcob_message(){
+        this->clocks = *(new vector<int>);
+        this->payload = "";
+    }
+
+    rcob_message(vector<int> &clocks, string &payload) {
+        // Constructor.
+        this->clocks = clocks;
+        this->payload = payload;
+    }
+};
 
 
 /**
@@ -26,18 +44,32 @@ extern vector<string> log_actions;
  * although it is 3 which is broadcasting. At the message level, instead, the
  * sender is going to be 3.
  */
-struct broadcast_message  {
+struct urb_message  {
 
     int seq_number;  // sequence number of the message
 
     // for example, we may have process 1 broadcasting message 3 received by process 2.
     // In this case, even if the message is broadcasted by 1, the sender is going to be 2.
-    int sender;    // initial sender of the message.
+    int first_sender;    // initial sender of the message.
+    rcob_message payload;
 
-    broadcast_message(int seq_number, int sender) {
+    urb_message(){
+        this->seq_number = 0;
+        this->first_sender = 0;
+        this->payload = *(new rcob_message());
+    }
+
+    urb_message(int seq_number, int first_sender) {
         // Constructor.
         this->seq_number = seq_number;
-        this->sender = sender;
+        this->first_sender = first_sender;
+    }
+
+    urb_message(int seq_number, int first_sender, rcob_message &payload) {
+        // Constructor.
+        this->seq_number = seq_number;
+        this->first_sender = first_sender;
+        this->payload = payload;
     }
 };
 
@@ -49,35 +81,36 @@ struct broadcast_message  {
  * ########################
  *
  * proc_number is always the sender of the message, not the receiver!!
- * the sequence number of the broadcast message can't be used as a unique identifier for the perfect link message.
- * The way to check for acks is using a vector of sets, vector<unordered_set<tuple<int, int, int>>>
- * The integers are: the process number of the sender of the perfect link message, the original sender of the broadcast
- * message and the sequence number of the original message.
+ *
  */
-struct message  {
+struct pp2p_message  {
     bool ack;
     int proc_number;
     long long seq_number;   // This sequence number has nothing to do with the sequence number of the broadcast level!
-    broadcast_message payload;
+    urb_message payload;
 
-    message(bool ack, int proc_number, broadcast_message &payload): payload(payload) {
+    pp2p_message(){
+        this->ack = false;
+        this->seq_number = 0;
+        this->proc_number = 0;
+        this->payload = *(new urb_message());
+    }
+
+    pp2p_message(bool ack, int proc_number, urb_message &payload): payload(payload) {
         // Constructor.
         this->ack = ack;
         this->proc_number = proc_number;
         this->payload = payload;
     }
 
-    // Overloading of constructor with the sequence number.
-    message(bool ack, int proc_number, long long seq_n, broadcast_message &payload): payload(payload) {
+    pp2p_message(bool ack, long long seq_number, int proc_number, urb_message &payload){
         // Constructor.
         this->ack = ack;
+        this->seq_number = seq_number;
         this->proc_number = proc_number;
         this->payload = payload;
-        this->seq_number = seq_n;
     }
-
 };
-
 
 
 /**
@@ -89,14 +122,14 @@ struct message  {
  *        An example of message is 1-10-42 which means ack for message 42, sent by process 10
  * @return a struct of type message
  */
-message parse_message(string msg);
+pp2p_message parse_message(string msg);
 
 pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membership_file);
 
-string to_string(message msg);
+string to_string(pp2p_message msg);
 
-void broadcast_log(broadcast_message& m);
-void delivery_log(broadcast_message& m);
+void broadcast_log(urb_message& m);
+void delivery_log(urb_message& m);
 
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 

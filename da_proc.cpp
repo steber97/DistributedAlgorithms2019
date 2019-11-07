@@ -15,9 +15,11 @@ static int wait_for_start = 1;
 
 int process_number;
 
+
 static void start(int signum) {
 	wait_for_start = 0;
 }
+
 
 static void stop(int signum) {
 	//reset signal handlers to default
@@ -119,10 +121,21 @@ int main(int argc, char** argv) {
     printf("Broadcasting messages.\n");
 
     for (int i = 1; i <= number_of_messages; i++) {
-        broadcast_message broad_msg (i, link->get_process_number());
-        be_broadcast->beb_broadcast(broad_msg);
-
+        urb_message msg (i, link->get_process_number());
+        be_broadcast->beb_broadcast(msg);
     }
+
+    // Test Perfect Link
+	// Try to send a lot of messages at the time.
+//	for (int i = 1; i<=number_of_processes; i++){
+//        if (i != process_number){
+//            for (int j = 1; j<=number_of_messages; j++) {
+//                cout << "Send pp2p_message " << j << " from " << process_number << " to " << i << endl;
+//                pp2p_message m(false, j, link->get_process_number(), "");
+//                link->send_to(i, m);
+//            }
+//        }
+//    }
 
     while(1) {
 		struct timespec sleep_time;
