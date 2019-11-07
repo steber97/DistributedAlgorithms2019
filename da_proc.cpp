@@ -123,6 +123,7 @@ int main(int argc, char** argv) {
     for (int i = 1; i <= number_of_messages; i++) {
         broadcast_message broad_msg (i, link->get_process_number());
         ur_broadcast->urb_broadcast(broad_msg);
+        //be_broadcast->beb_broadcast(broad_msg);
     }
 
     while(1) {
