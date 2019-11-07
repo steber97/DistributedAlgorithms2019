@@ -1,0 +1,14 @@
+//
+// Created by stefano on 07/11/19.
+//
+
+#ifndef DISTRIBUTED_ALGORITHMS_BEBBROADCAST_H
+#define DISTRIBUTED_ALGORITHMS_BEBBROADCAST_H
+
+
+class BebBroadcast {
+
+};
+
+
+#endif //DISTRIBUTED_ALGORITHMS_BEBBROADCAST_H

@@ -41,6 +41,33 @@ struct message  {
     }
 };
 
+
+/**
+ * This is the broadcast message, it is used at the broadcast level
+ * The sender is not the actual sender, but the initial sender of that message.
+ *
+ * So, if process 3 broadcasts a message received by process 2, the sender is still 2,
+ * although it is 3 which is broadcasting. At the message level, instead, the
+ * sender is going to be 3.
+ */
+struct broadcast_message  {
+
+    int seq_number;  // sequence number of the message
+
+    // for example, we may have process 1 broadcasting message 3 received by process 2.
+    // In this case, even if the message is broadcasted by 1, the sender is going to be 2.
+    int sender;    // initial sender of the message.
+    message payload;   // the paylaod is a perfect link message.
+
+    broadcast_message(int seq_number, int sender, message& payload){
+        // Constructor.
+        this->seq_number = seq_number;
+        this->sender = sender;
+        this->payload = payload;
+    }
+};
+
+
 /**
  * @param msg is a string formatted like A-ID-SN where:
  *        - A represents the ack
@@ -57,6 +84,10 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
 string to_string(message msg);
 
 string create_message(message msg);
+
+string create_broadcast_log(message m);
+
+string create_delivery_log(message m, int sender);
 
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 
