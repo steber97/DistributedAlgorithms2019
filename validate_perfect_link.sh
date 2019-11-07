@@ -2,12 +2,15 @@
 
 init_time=2
 time_to_finish=20
-number_of_processes=30
+number_of_processes=5
+number_of_messages=4
+
+python3 generate_membership_file $number_of_processes $number_of_messages
 
 # start 5 processes, each broadcasting 100 messages
 for i in `seq 1 $number_of_processes`
 do
-    ./da_proc $i membership &
+    ./da_proc $i membership_py &
     da_proc_id[$i]=$!
 done
 

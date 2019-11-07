@@ -1,0 +1,22 @@
+import sys
+
+def pad_with_zero(i):
+    if i<10:
+        return "00" + str(i)
+    if i < 100:
+        return "0" + str(i)
+    return str(i)
+
+if __name__=='__main__':
+    number_of_processes = int(sys.argv[1])
+    number_of_messages = int(sys.argv[2])
+
+    f = open('membership_py', 'w')
+    f.write(str(number_of_processes) + "\n")
+    for i in range(1, number_of_processes+1):
+        f.write(str(i) + " ")
+        f.write('127.0.0.1')
+        f.write(" ")
+        f.write("12" + pad_with_zero(i) + "\n")
+
+    f.write(str(number_of_messages) + "\n")
