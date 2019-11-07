@@ -6,6 +6,12 @@
 mutex mtx_log;
 vector<string> log_actions;
 
+// This is the mutex used to communicate with the shared queue between the urb and the beb.
+mutex mtx_beb_urb;
+queue<broadcast_message> queue_beb_urb;
+bool queue_beb_urb_locked = false;
+condition_variable cv_beb_urb;
+
 /**
  * Parses the input file
  * @param membership_file the file to parse
@@ -125,7 +131,6 @@ void broadcast_log(broadcast_message& m) {
     // Append the broadcast log message
     log_actions.push_back(log_msg);
     mtx_log.unlock();
-
 }
 
 

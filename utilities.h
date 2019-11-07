@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <unordered_map>
 #include <mutex>
+#include <condition_variable>
+#include <queue>
 
 using namespace std;
 
@@ -97,6 +99,12 @@ string to_string(message msg);
 
 void broadcast_log(broadcast_message& m);
 void delivery_log(broadcast_message& m);
+
+
+extern condition_variable cv_beb_urb;
+extern queue<broadcast_message> queue_beb_urb;
+extern mutex mtx_beb_urb;
+extern bool queue_beb_urb_locked;
 
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 

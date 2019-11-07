@@ -95,6 +95,7 @@ int main(int argc, char** argv) {
 
     Link* link = new Link(sockfd, process_number, input_data.second);
     BeBroadcast* be_broadcast = new BeBroadcast(link, number_of_processes, number_of_messages);
+    UrBroadcast* ur_broadcast = new UrBroadcast(be_broadcast, number_of_processes, number_of_messages);
 
     //Broadcast* broadcast = new Broadcast(link, number_of_processes, number_of_messages);
 
@@ -114,14 +115,14 @@ int main(int argc, char** argv) {
 
     link->init();
 	be_broadcast->init();
+	ur_broadcast->init();
 
     //broadcast messages
     printf("Broadcasting messages.\n");
 
     for (int i = 1; i <= number_of_messages; i++) {
         broadcast_message broad_msg (i, link->get_process_number());
-        be_broadcast->beb_broadcast(broad_msg);
-
+        ur_broadcast->urb_broadcast(broad_msg);
     }
 
     while(1) {

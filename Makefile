@@ -5,8 +5,8 @@ all: da_proc
 da_proc: da_proc.cpp  link.o utilities.o timer_killer.o ur_broadcast.o be_broadcast.o
 	g++ $(CFLAG) -o da_proc da_proc.cpp utilities.o link.o timer_killer.o ur_broadcast.o be_broadcast.o
 
-ur_broadcast.o: UrBroadcast.cpp UrBroadcast.h
-	g++ $(CFLAG) -c -o ur_broadcast.o UrBroadcast.cpp
+ur_broadcast.o: UrBroadcast.cpp UrBroadcast.h utilities.o be_broadcast.o
+	g++ $(CFLAG) -c -o ur_broadcast.o UrBroadcast.cpp utilities.o be_broadcast.o
 
 be_broadcast.o: BeBroadcast.cpp BeBroadcast.h link.o utilities.o
 	g++ $(CFLAG) -c -o be_broadcast.o BeBroadcast.cpp utilities.o link.o
