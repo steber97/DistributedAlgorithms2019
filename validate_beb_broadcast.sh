@@ -1,12 +1,12 @@
 #!/bin/bash
 
 init_time=2
-time_to_finish=10
-number_of_processes=3
+time_to_finish=20
 
 
-number_of_processes=5
-number_of_messages=4
+processes_to_kill="12 9"
+number_of_processes=20
+number_of_messages=20
 
 python3 generate_membership_file.py $number_of_processes $number_of_messages
 
@@ -26,6 +26,12 @@ do
     fi
 done
 
+for i in $processes_to_kill;
+do
+  echo killing "${da_proc_id[i]}"
+  kill -TERM "${da_proc_id[i]}" # crash process 4
+done
+
 sleep $time_to_finish
 
 # stop all processes (don't know why, but we have to stop them twice)
@@ -42,6 +48,8 @@ do
 	kill "${da_proc_id[$i]}"
     fi
 done
+
+python3 validate_beb_correctness.py $processes_to_kill
 
 echo finish
 

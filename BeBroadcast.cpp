@@ -40,8 +40,6 @@ void run_deliverer_beb(Link* link, BeBroadcast* beb_broadcast){
         message msg = link->get_next_message();
         // the broadcast message that the beb delivery gets
         // is with same sender and seq number of the pp2p message.
-
-        // TODO: fix message constructor!!
         broadcast_message bm(msg.payload);
         beb_broadcast->beb_deliver(bm);
 

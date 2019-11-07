@@ -30,7 +30,7 @@ static void stop(int signum) {
 	//write/flush output file if necessary
 	printf("Writing output.\n");
 
-    ofstream out("da_proc_" + to_string(process_number) + ".out");
+    ofstream out("output/da_proc_" + to_string(process_number) + ".out");
 
     // Write log actions to output!
     mtx_log.lock();
@@ -123,18 +123,6 @@ int main(int argc, char** argv) {
         be_broadcast->beb_broadcast(broad_msg);
 
     }
-
-    // Test Perfect Link
-	// Try to send a lot of messages at the time.
-//	for (int i = 1; i<=number_of_processes; i++){
-//        if (i != process_number){
-//            for (int j = 1; j<=number_of_messages; j++) {
-//                cout << "Send message " << j << " from " << process_number << " to " << i << endl;
-//                message m(false, j, link->get_process_number(), "");
-//                link->send_to(i, m);
-//            }
-//        }
-//    }
 
     while(1) {
 		struct timespec sleep_time;
