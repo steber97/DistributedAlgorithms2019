@@ -19,12 +19,21 @@
 #include <pthread.h>
 #include <thread>
 #include <condition_variable>
+#include <unordered_set>
 
 #include "utilities.h"
 
 #define MAXLINE 1024
 
 using namespace std;
+
+// code freely adapted by https://stackoverflow.com/questions/15160889/how-can-i-make-an-unordered-set-of-pairs-of-integers-in-c
+struct pair_hash {
+    // only define the hash, as the equal operator is already defined in c++! :)
+    inline size_t operator()(const pair<int,int> & v) const {
+        return (v.first<<10) + v.second;
+    }
+};
 
 
 extern mutex mtx_receiver, mtx_sender, mtx_acks;
@@ -33,9 +42,13 @@ extern queue<message> incoming_messages;
 
 extern queue<pair<int,message>> outgoing_messages;
 
-extern vector<vector<bool>> acks;
+/// Both acks and pl_delivered are indexed in this way:
+// the vector is indexed by the process number in the perfect link message
+// the pair is made of the sender and the sequence number in the broadcast message.
 
-extern vector<vector<bool>> pl_delivered;  // Delivered by perfect link.
+extern vector<unordered_set<pair<int,int>, pair_hash>> acks;  // acks
+
+extern vector<unordered_set<pair<int,int>, pair_hash>> pl_delivered;  // Delivered by perfect link.
 
 
 /**

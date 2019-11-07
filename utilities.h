@@ -49,18 +49,19 @@ struct broadcast_message  {
  * ########################
  *
  * proc_number is always the sender of the message, not the receiver!!
- *
+ * the sequence number of the broadcast message can't be used as a unique identifier for the perfect link message.
+ * The way to check for acks is using a vector of sets, vector<unordered_set<tuple<int, int, int>>>
+ * The integers are: the process number of the sender of the perfect link message, the original sender of the broadcast
+ * message and the sequence number of the original message.
  */
 struct message  {
     bool ack;
-    int seq_number;
     int proc_number;
     broadcast_message payload;
 
-    message(bool ack, int seq_number, int proc_number, broadcast_message &payload): payload(payload) {
+    message(bool ack, int proc_number, broadcast_message &payload): payload(payload) {
         // Constructor.
         this->ack = ack;
-        this->seq_number = seq_number;
         this->proc_number = proc_number;
         this->payload = payload;
     }

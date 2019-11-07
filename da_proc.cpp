@@ -12,7 +12,6 @@
 using namespace std;
 
 static int wait_for_start = 1;
-bool initialization_phase = true;
 
 int process_number;
 
@@ -100,10 +99,10 @@ int main(int argc, char** argv) {
     //Broadcast* broadcast = new Broadcast(link, number_of_processes, number_of_messages);
 
     // Resize the number of acks (at the perfect link layer)
-    acks.resize(number_of_processes+1, vector<bool>(number_of_messages+1, false));
+    acks.resize(number_of_processes+1, unordered_set<pair<int,int>, pair_hash>());
 
     // Resize the delivered messages matrix (at the perfect link layer) It is used to avoid duplicates.
-    pl_delivered.resize(number_of_processes+1, vector<bool>(number_of_messages+1, false));
+    pl_delivered.resize(number_of_processes+1, unordered_set<pair<int,int>, pair_hash>());
 
     //wait until start signal
 	while(wait_for_start) {
@@ -121,7 +120,7 @@ int main(int argc, char** argv) {
 
     for (int i = 1; i <= number_of_messages; i++) {
         broadcast_message broad_msg (i, link->get_process_number());
-        message msg(false, i, link->get_process_number(), broad_msg);
+        message msg(false, link->get_process_number(), broad_msg);
         be_broadcast->beb_broadcast(broad_msg);
 
     }

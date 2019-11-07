@@ -36,11 +36,11 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
 /**
  * The message format sent at the perfect link layer is :
  * perfect_link/broadcast
- * perfect_link: ack-process_num-seq_number
- * broadcast: sender-seq_number
+ * perfect_link: ack-process_num
+ * broadcast: original_sender-seq_number
  *
  * for instance, the message
- * 0-2-3/5-3
+ * 0-3/5-3  means a normal message (ack = 1) sent by process 3, which brings the message 3 originally sent by 5.
  * @param str
  * @return
  */
@@ -56,7 +56,9 @@ message parse_message(string str) {
     }
     cont_outer.push_back(str.substr(previous, current - previous));
 
+    // We need to have a message with size 2 (is like making the split by '/' in python).
     assert(cont_outer.size() == 2);
+
     // Parse the perfect link message
     previous = 0;
     vector<string> cont1;
@@ -67,10 +69,10 @@ message parse_message(string str) {
         previous = current + 1;
         current = cont_outer[0].find(delim, previous);
     }
+    cont1.push_back(cont_outer[0].substr(previous, current - previous));
 
     bool ack = stoi(cont1[0]);
     int proc_number = stoi(cont1[1]);
-    int seq_number = stoi(cont1[2]);
 
 
     // parse the broadcast message.
@@ -83,22 +85,31 @@ message parse_message(string str) {
         previous = current + 1;
         current = cont_outer[1].find(delim, previous);
     }
-    cont2.push_back(str.substr(previous, current - previous));
+    cont2.push_back(cont_outer[1].substr(previous, current - previous));
 
     int sender = stoi(cont2[0]);
     int seq_number_broad = stoi(cont2[1]);
 
     broadcast_message bm (seq_number_broad, sender);
-    message m(ack, seq_number, proc_number, bm);
-
-    cout << "parse message" << str << " " << ack << " " << proc_number << " " << seq_number << " / " << sender << " " << seq_number_broad << endl;
+    message m(ack, proc_number, bm);
 
     return m;
 }
 
 
+/**
+ * returns a string of the format:
+ * 0-1/5-6
+ * the first part (before /) is the perfect link message.
+ * the second part is the broadcast part.
+ *
+ * ack - process / original_sender - sequence_number  (without whitespace)
+ * @param msg
+ * @return
+ */
 string to_string(message msg){
-    return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number);
+    return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "/" + to_string(msg.payload.sender)
+                                + "-" + to_string(msg.payload.seq_number);
 }
 
 

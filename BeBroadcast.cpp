@@ -16,9 +16,9 @@ void BeBroadcast::init(){
 
 void BeBroadcast::beb_broadcast(broadcast_message &msg) {
     broadcast_log(msg);
+    message pp2p_msg = message(false, this->link->get_process_number(), msg);
     for (int i = 1; i <= number_of_processes; i++) {
-        if (number_of_processes != link->get_process_number()){}
-            //TODO decommenta e togli le graffe dopo l'IF ----- link->send_to(i, msg);
+        link->send_to(i, pp2p_msg);
     }
 }
 

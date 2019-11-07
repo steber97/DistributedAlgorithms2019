@@ -8,9 +8,10 @@ queue<message> incoming_messages;
 
 queue<pair<int,message>> outgoing_messages;
 
-vector<vector<bool>> acks;
+vector<unordered_set<pair<int,int>, pair_hash>> acks;  // acks
 
-vector<vector<bool>> pl_delivered;  // delivered by perfect links.
+vector<unordered_set<pair<int,int>, pair_hash>> pl_delivered;  // Delivered by perfect link.
+
 
 
 Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id) {
@@ -62,8 +63,7 @@ void Link::send_ack(message msg) {
     int source_process = process_number;
     int dest_process = msg.proc_number;
 
-    broadcast_message fake_b(0, 0);  // acks aren't considered at the broadcast level.
-    message ack_message(true, msg.seq_number, source_process, fake_b);
+    message ack_message(true, source_process, msg.payload);
 
     struct sockaddr_in d_addr;
 
@@ -81,7 +81,7 @@ void Link::send_ack(message msg) {
 
 
 void Link::pp2p_deliver(message msg){
-    cout << "\npp2p delivery di: [pn=" << msg.proc_number << ", sn=" << msg.seq_number << "] by process " << process_number << endl;
+    cout << "\npp2p delivery di: [pn=" << msg.proc_number << "] by process " << process_number << endl;
 }
 
 
@@ -105,13 +105,13 @@ message Link::get_next_message(){
             // we received an ack;
             // cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
             mtx_acks.lock();
-            acks[msg.proc_number][msg.seq_number] = true;
+            acks[msg.proc_number].insert({msg.payload.sender, msg.payload.seq_number});
             mtx_acks.unlock();;
         } else {
             this->send_ack(msg);
             // Check if it has not been delivered already
-            if (! pl_delivered[msg.proc_number][msg.seq_number]) {
-                pl_delivered[msg.proc_number][msg.seq_number] = true;
+            if (pl_delivered[msg.proc_number].find({msg.payload.sender, msg.payload.seq_number}) == pl_delivered[msg.proc_number].end()) {
+                pl_delivered[msg.proc_number].insert({msg.payload.sender, msg.payload.seq_number});
                 return msg;
             }
         }
@@ -131,7 +131,7 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
             mtx_sender.unlock();
 
             mtx_acks.lock();
-            if (!acks[dest_and_msg.first][dest_and_msg.second.seq_number]) {
+            if (acks[dest_and_msg.first].find({dest_and_msg.second.payload.sender, dest_and_msg.second.payload.seq_number}) == acks[dest_and_msg.first].end()){
                 // Send only if the ack hasn't been received
                 mtx_acks.unlock();
                 string msg_s = to_string(dest_and_msg.second);
