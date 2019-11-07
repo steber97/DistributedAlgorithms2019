@@ -83,8 +83,6 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
 
 string to_string(message msg);
 
-string create_message(message msg);
-
 string create_broadcast_log(message m);
 
 string create_delivery_log(message m, int sender);

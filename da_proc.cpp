@@ -5,7 +5,7 @@
 #include <iostream>
 #include "Link.h"
 #include "utilities.h"
-#include "Broadcast.h"
+#include "UrBroadcast.h"
 
 using namespace std;
 
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     }
 
     Link* link = new Link(sockfd, process_number, input_data.second);
-    Broadcast* broadcast = new Broadcast(link, number_of_processes, number_of_messages);
+    UrBroadcast* broadcast = new UrBroadcast(link, number_of_processes, number_of_messages);
 
     // Resize the number of acks
     acks.resize(number_of_processes+1, vector<bool>(number_of_messages+1, false));

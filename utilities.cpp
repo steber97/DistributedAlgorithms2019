@@ -51,10 +51,3 @@ message parse_message(string str) {
 string to_string(message msg){
     return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number);
 }
-
-
-
-
-string create_message(message msg){
-    return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number);
-}
