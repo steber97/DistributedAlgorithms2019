@@ -33,14 +33,18 @@ void Broadcast::urb_broadcast(message &msg) {
     beb_broadcast(msg);
 }
 
-
 void Broadcast::beb_deliver(message &msg) {
-    (*acks)[msg.seq_number - 1].insert(msg.proc_number);
-    if (forward->find(msg.seq_number) == forward->end()) {
-        forward->insert(msg.seq_number);
-        beb_broadcast(msg);
-    }
+    // Actually do nothing;
+
 }
+//
+//void Broadcast::beb_deliver(message &msg) {
+//    (*acks)[msg.seq_number - 1].insert(msg.proc_number);
+//    if (forward->find(msg.seq_number) == forward->end()) {
+//        forward->insert(msg.seq_number);
+//        beb_broadcast(msg);
+//    }
+//}
 
 
 void Broadcast::urb_deliver(int m_seq_number) {

@@ -17,37 +17,6 @@ extern mutex mtx_log;
 extern vector<string> log_actions;
 
 
-/**
- * This is the message structure.
- * ########################
- * ## VERY CAREFUL HERE! ##
- * ########################
- *
- * proc_number is always the sender of the message, not the receiver!!
- *
- */
-struct message  {
-    bool ack;
-    int seq_number;
-    int proc_number;
-    string payload;
-
-    message(){
-        this->ack = false;
-        this->seq_number = 0;
-        this->proc_number = 0;
-        this->payload = "";
-    }
-
-    message(bool ack, int seq_number, int proc_number, string payload){
-        // Constructor.
-        this->ack = ack;
-        this->seq_number = seq_number;
-        this->proc_number = proc_number;
-        this->payload = payload;
-    }
-};
-
 
 /**
  * This is the broadcast message, it is used at the broadcast level
@@ -64,15 +33,39 @@ struct broadcast_message  {
     // for example, we may have process 1 broadcasting message 3 received by process 2.
     // In this case, even if the message is broadcasted by 1, the sender is going to be 2.
     int sender;    // initial sender of the message.
-    message payload;   // the paylaod is a perfect link message.
 
-    broadcast_message(int seq_number, int sender, message& payload){
+    broadcast_message(int seq_number, int sender) {
         // Constructor.
         this->seq_number = seq_number;
         this->sender = sender;
+    }
+};
+
+
+/**
+ * This is the message structure.
+ * ########################
+ * ## VERY CAREFUL HERE! ##
+ * ########################
+ *
+ * proc_number is always the sender of the message, not the receiver!!
+ *
+ */
+struct message  {
+    bool ack;
+    int seq_number;
+    int proc_number;
+    broadcast_message payload;
+
+    message(bool ack, int seq_number, int proc_number, broadcast_message &payload): payload(payload) {
+        // Constructor.
+        this->ack = ack;
+        this->seq_number = seq_number;
+        this->proc_number = proc_number;
         this->payload = payload;
     }
 };
+
 
 
 /**

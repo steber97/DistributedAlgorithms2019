@@ -15,7 +15,7 @@ public:
 
     BebBroadcast(Link* link, int number_of_processes);
 
-    void beb_broadcast(broadcast_message m);
+    void beb_broadcast(message m);
 
     void beb_delivery(broadcast_message m);
 

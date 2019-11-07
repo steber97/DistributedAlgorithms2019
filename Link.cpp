@@ -61,7 +61,9 @@ void Link::send_ack(message msg) {
     // Create the ack string (1-source process-sequence number of message to ack)
     int source_process = process_number;
     int dest_process = msg.proc_number;
-    message ack_message(true, msg.seq_number, source_process, "");
+
+    broadcast_message fake_b(0, 0);  // acks aren't considered at the broadcast level.
+    message ack_message(true, msg.seq_number, source_process, fake_b);
 
     struct sockaddr_in d_addr;
 

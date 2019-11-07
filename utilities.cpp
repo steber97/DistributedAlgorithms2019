@@ -1,3 +1,5 @@
+#include <cassert>
+#include <assert.h>
 #include "utilities.h"
 
 // these are used to cover the logging functions
@@ -31,22 +33,65 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
 }
 
 
+/**
+ * The message format sent at the perfect link layer is :
+ * perfect_link/broadcast
+ * perfect_link: ack-process_num-seq_number
+ * broadcast: sender-seq_number
+ *
+ * for instance, the message
+ * 0-2-3/5-3
+ * @param str
+ * @return
+ */
 message parse_message(string str) {
     size_t current, previous = 0;
-    vector<string> cont;
-    char delim = '-';
-    current = str.find(delim);
+    vector<string> cont_outer;
+    char delim_outer = '/';
+    current = str.find(delim_outer);
     while (current != string::npos) {
-        cont.push_back(str.substr(previous, current - previous));
+        cont_outer.push_back(str.substr(previous, current - previous));
         previous = current + 1;
-        current = str.find(delim, previous);
+        current = str.find(delim_outer, previous);
     }
-    cont.push_back(str.substr(previous, current - previous));
-    bool ack = stoi(cont[0]);
-    int proc_number = stoi(cont[1]);
-    int seq_number = stoi(cont[2]);
+    cont_outer.push_back(str.substr(previous, current - previous));
 
-    message m(ack, seq_number, proc_number, "") ;
+    assert(cont_outer.size() == 2);
+    // Parse the perfect link message
+    previous = 0;
+    vector<string> cont1;
+    char delim = '-';
+    current = cont_outer[0].find(delim);
+    while (current != string::npos) {
+        cont1.push_back(cont_outer[0].substr(previous, current - previous));
+        previous = current + 1;
+        current = cont_outer[0].find(delim, previous);
+    }
+
+    bool ack = stoi(cont1[0]);
+    int proc_number = stoi(cont1[1]);
+    int seq_number = stoi(cont1[2]);
+
+
+    // parse the broadcast message.
+    previous = 0;
+    vector<string> cont2;
+    delim = '-';
+    current = cont_outer[1].find(delim);
+    while (current != string::npos) {
+        cont2.push_back(cont_outer[1].substr(previous, current - previous));
+        previous = current + 1;
+        current = cont_outer[1].find(delim, previous);
+    }
+    cont2.push_back(str.substr(previous, current - previous));
+
+    int sender = stoi(cont2[0]);
+    int seq_number_broad = stoi(cont2[1]);
+
+    broadcast_message bm (seq_number_broad, sender);
+    message m(ack, seq_number, proc_number, bm);
+
+    cout << "parse message" << str << " " << ack << " " << proc_number << " " << seq_number << " / " << sender << " " << seq_number_broad << endl;
 
     return m;
 }

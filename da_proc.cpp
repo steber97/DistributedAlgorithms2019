@@ -119,12 +119,10 @@ int main(int argc, char** argv) {
     printf("Broadcasting messages.\n");
 
     for (int i = 1; i <= number_of_messages; i++) {
-        message msg(false, i, link->get_process_number(), "");
-        broadcast_message broad_msg (i, link->get_process_number(), msg);
-        beb_broadcast->beb_broadcast(broad_msg);
+        broadcast_message broad_msg(i, link->get_process_number());
+        message msg(false, i, link->get_process_number(), broad_msg);
+        beb_broadcast->beb_broadcast(msg);
     }
-
-    usleep(20000000);
 
     // Test Perfect Link
 	// Try to send a lot of messages at the time.

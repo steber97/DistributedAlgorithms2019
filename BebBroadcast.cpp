@@ -2,14 +2,14 @@
 #include "BebBroadcast.h"
 
 
-void BebBroadcast::beb_broadcast(broadcast_message m){
+void BebBroadcast::beb_broadcast(message m){
     /**
      * It only sends the payload of the message to everybody.
      */
-    create_broadcast_log(m);
+    create_broadcast_log(m.payload);
 
     for (int i = 1; i <= this->number_of_processes; i++) {
-        link->send_to(i, m.payload);
+        link->send_to(i, m);
     }
 }
 
@@ -44,7 +44,7 @@ void run_deliverer_beb(Link* link, BebBroadcast* beb_broadcast){
         message msg = link->get_next_message();
         // the broadcast message that the beb delivery gets
         // is with same sender and seq number of the pp2p message.
-        broadcast_message bm(msg.seq_number, msg.proc_number, msg);
+        broadcast_message bm(msg.seq_number, msg.proc_number);
         beb_broadcast->beb_delivery(bm);
     }
 }
