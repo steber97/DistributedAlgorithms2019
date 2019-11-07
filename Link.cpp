@@ -176,7 +176,7 @@ void run_receiver(Link *link) {
 
         message msg = parse_message(string(buf));
 
-        // cout << "\nNew message: [pn=" << msg.proc_number << ", sn=" << msg.seq_number << "] by process " << link->get_process_number() << endl;
+        // cout << "\nNew message: ack="<< msg.ack <<" [pn=" << msg.proc_number << ", snd=" << msg.payload.sender << ", seq=" << msg.payload.seq_number <<  "] by process " << link->get_process_number() << endl;
 
         // Put the message in the queue.
         unique_lock<mutex> lck(mtx_receiver);
