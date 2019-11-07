@@ -6,7 +6,8 @@
 
 #include "Link.h"
 #include "utilities.h"
-#include "BebBroadcast.h"
+#include "UrBroadcast.h"
+#include "BeBroadcast.h"
 
 using namespace std;
 
@@ -94,7 +95,7 @@ int main(int argc, char** argv) {
     }
 
     Link* link = new Link(sockfd, process_number, input_data.second);
-    BebBroadcast* beb_broadcast = new BebBroadcast(link, number_of_processes);
+    BeBroadcast* be_broadcast = new BeBroadcast(link, number_of_processes, number_of_messages);
 
     //Broadcast* broadcast = new Broadcast(link, number_of_processes, number_of_messages);
 
@@ -113,15 +114,16 @@ int main(int argc, char** argv) {
 	}
 
     link->init();
-	beb_broadcast->init();
+	be_broadcast->init();
 
     //broadcast messages
     printf("Broadcasting messages.\n");
 
     for (int i = 1; i <= number_of_messages; i++) {
-        broadcast_message broad_msg(i, link->get_process_number());
+        broadcast_message broad_msg (i, link->get_process_number());
         message msg(false, i, link->get_process_number(), broad_msg);
-        beb_broadcast->beb_broadcast(msg);
+        be_broadcast->beb_broadcast(broad_msg);
+
     }
 
     // Test Perfect Link

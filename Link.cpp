@@ -77,7 +77,11 @@ void Link::send_ack(message msg) {
     sendto(sockfd, message_to_send.c_str(), strlen(message_to_send.c_str()),
            MSG_CONFIRM, (const struct sockaddr *) &d_addr,
            sizeof(d_addr));
+}
 
+
+void Link::pp2p_deliver(message msg){
+    cout << "\npp2p delivery di: [pn=" << msg.proc_number << ", sn=" << msg.seq_number << "] by process " << process_number << endl;
 }
 
 
@@ -112,11 +116,6 @@ message Link::get_next_message(){
             }
         }
     }
-}
-
-
-void Link::pp2p_deliver(message msg){
-    cout << "\npp2p delivery di: [pn=" << msg.proc_number << ", sn=" << msg.seq_number << "] by process " << process_number << endl;
 }
 
 

@@ -102,19 +102,11 @@ string to_string(message msg){
 }
 
 
-
-
-string create_message(message msg){
-    return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number);
-}
-
-
 /**
  * Appends the broadcast log to the list of activities.
  * @param m the broadcast message to log
  */
-void create_broadcast_log(broadcast_message& m) {
-
+void broadcast_log(broadcast_message& m) {
     string log_msg = "b " + to_string(m.seq_number) ;
     mtx_log.lock();
     // Append the broadcast log message
@@ -130,7 +122,7 @@ void create_broadcast_log(broadcast_message& m) {
  * @param sender
  * @return
  */
-void create_delivery_log(broadcast_message& m) {
+void delivery_log(broadcast_message& m) {
     string log_msg = "d " + to_string(m.sender) + " " + to_string(m.seq_number);
     mtx_log.lock();
     log_actions.push_back(log_msg);
