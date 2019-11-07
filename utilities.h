@@ -7,8 +7,15 @@
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
+#include <mutex>
 
 using namespace std;
+
+
+
+extern mutex mtx_log;
+extern vector<string> log_actions;
+
 
 /**
  * This is the message structure.
@@ -83,9 +90,8 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
 
 string to_string(message msg);
 
-string create_broadcast_log(message m);
-
-string create_delivery_log(message m, int sender);
+void broadcast_log(broadcast_message& m);
+void delivery_log(broadcast_message& m);
 
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 

@@ -1,41 +1,38 @@
-#ifndef DISTRIBUTED_ALGORITHMS_BROADCAST_H
-#define DISTRIBUTED_ALGORITHMS_BROADCAST_H
+#ifndef DISTRIBUTED_ALGORITHMS_URBROADCAST_H
+#define DISTRIBUTED_ALGORITHMS_URBROADCAST_H
 
 #include <unordered_set>
-
-#include "Link.h"
+#include <condition_variable>
+#include "BeBroadcast.h"
 #include "utilities.h"
 
 using namespace std;
 
-class Broadcast {
+class UrBroadcast {
 private:
-    Link *link;
+    BeBroadcast *beb;
     int number_of_processes;
     int number_of_messages;
     unordered_set<int> *delivered;
     unordered_set<int> *forward;
     vector<unordered_set<int >> *acks; //a vector (accessible by seq_number of messages) that contains,
                                        // for each message m, a set of the process_numbers of the processes
-                                       // who received and then broadcasted successfully m
+                                       // from who the current process received m back
     condition_variable cv_forward, cv_delivered, cv_acks;
     mutex mtx_forward, mtx_delivered, mtx_acks;
     bool forward_locked, delivered_locked, acks_locked;
-
 public:
-    Broadcast(Link *link, int number_of_processes, int number_of_messages);
+    UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_of_messages);
     void init();
-    void beb_broadcast(message &msg);
-    void urb_broadcast(message &msg);
-    void beb_deliver(message &msg);
-    void urb_deliver(int m_seq_number);
+    void urb_broadcast(broadcast_message &msg);
+    void urb_deliver(broadcast_message &msg);
     unordered_set<int> * forwarded_messages();
-    bool is_delivered(int m_seq_number);
-    int acks_received(int m_seq_number);
+    bool is_delivered(broadcast_message &msg);
+    int acks_received(broadcast_message &msg);
     int get_number_of_processes();
-    void addDelivered(int m_seq_number);
+    void addDelivered(broadcast_message &msg);
 };
 
-void handle_delivery(Broadcast* urb);
+void handle_delivery(UrBroadcast* urb);
 
-#endif //DISTRIBUTED_ALGORITHMS_BROADCAST_H
+#endif //DISTRIBUTED_ALGORITHMS_URBROADCAST_H

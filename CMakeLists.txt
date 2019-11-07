@@ -4,4 +4,4 @@ project(distributed_algorithms)
 set(CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_FLAGS "-pthread")
 
-add_executable(da_proc da_proc.cpp UrBroadcast.cpp utilities.cpp Link.cpp TimerKiller.cpp)
+add_executable(da_proc da_proc.cpp UrBroadcast.cpp utilities.cpp Link.cpp TimerKiller.cpp BeBroadcast.cpp)

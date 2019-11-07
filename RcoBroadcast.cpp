@@ -4,6 +4,3 @@
 
 #include "RcoBroadcast.h"
 
-void UrBroadcast::urb_deliver(int m_seq_number) {
-    //TODO
-}
