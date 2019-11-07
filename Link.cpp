@@ -79,19 +79,36 @@ void Link::send_ack(message msg) {
 }
 
 
+/**
+ * This is the deliverer for the perfect link level.
+ *
+ * It avoids duplicate messages.
+ * @return the next new message.
+ */
 message Link::get_next_message(){
     while(true){
         unique_lock<mutex> lck(mtx_receiver);
-        //TODO correggere errore sulla concorrenza
         cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
         queue_locked = true;
         message msg = incoming_messages.front();
         incoming_messages.pop();
         queue_locked = false;
         cv_receiver.notify_one();
-        // TODO: think about mtx_pl_delivered: it should be useless!
-        return msg;
 
+        if (msg.ack) {
+            // we received an ack;
+            // cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
+            mtx_acks.lock();
+            acks[msg.proc_number][msg.seq_number] = true;
+            mtx_acks.unlock();;
+        } else {
+            this->send_ack(msg);
+            // Check if it has not been delivered already
+            if (! pl_delivered[msg.proc_number][msg.seq_number]) {
+                pl_delivered[msg.proc_number][msg.seq_number] = true;
+                return msg;
+            }
+        }
     }
 }
 

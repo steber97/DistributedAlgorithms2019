@@ -3,14 +3,17 @@
 #include <signal.h>
 #include <time.h>
 #include <iostream>
+
 #include "Link.h"
 #include "utilities.h"
-#include "Broadcast.h"
+#include "BebBroadcast.h"
 
 using namespace std;
 
 static int wait_for_start = 1;
 bool initialization_phase = true;
+
+int process_number;
 
 static void start(int signum) {
 	wait_for_start = 0;
@@ -27,30 +30,20 @@ static void stop(int signum) {
 	//write/flush output file if necessary
 	printf("Writing output.\n");
 
+    ofstream out("da_proc_" + to_string(process_number) + ".out");
+
+    // Write log actions to output!
+    mtx_log.lock();
+    for (string line: log_actions){
+        out << line << endl;
+    }
+    mtx_log.unlock();
+
+
 	//exit directly from signal handler
 	exit(0);
 }
 
-void run_deliverer(Link* link, int number_of_processes){
-    vector<int> delivered(number_of_processes, 0);
-    while(true) {
-        message msg = link->get_next_message();
-        if (msg.ack) {
-            // we received an ack;
-            // cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
-            mtx_acks.lock();
-            acks[msg.proc_number][msg.seq_number] = true;
-            mtx_acks.unlock();;
-        } else {
-            link->send_ack(msg);
-            // Check if it has not been delivered already
-            if (! pl_delivered[msg.proc_number][msg.seq_number]) {
-                pl_delivered[msg.proc_number][msg.seq_number] = true;
-                link->pp2p_deliver(msg);
-            }
-        }
-    }
-}
 
 int main(int argc, char** argv) {
 
@@ -65,7 +58,8 @@ int main(int argc, char** argv) {
     signal(SIGTERM, stop);
     signal(SIGINT, stop);
 
-    int process_number = atoi(argv[1]);
+    // it is a global variable, used even in the signal handler to manage the output file.
+    process_number = atoi(argv[1]);
 
     cout << "The process id is " << ::getpid() << endl;
 
@@ -100,13 +94,15 @@ int main(int argc, char** argv) {
     }
 
     Link* link = new Link(sockfd, process_number, input_data.second);
-    Broadcast* broadcast = new Broadcast(link, number_of_processes, number_of_messages);
+    BebBroadcast* beb_broadcast = new BebBroadcast(link, number_of_processes);
 
-    // Resize the number of acks
+    //Broadcast* broadcast = new Broadcast(link, number_of_processes, number_of_messages);
+
+    // Resize the number of acks (at the perfect link layer)
     acks.resize(number_of_processes+1, vector<bool>(number_of_messages+1, false));
-    pl_delivered.resize(number_of_processes+1, vector<bool>(number_of_messages+1, false));
 
-    thread t_del(run_deliverer, link, number_of_processes);
+    // Resize the delivered messages matrix (at the perfect link layer) It is used to avoid duplicates.
+    pl_delivered.resize(number_of_processes+1, vector<bool>(number_of_messages+1, false));
 
     //wait until start signal
 	while(wait_for_start) {
@@ -117,33 +113,30 @@ int main(int argc, char** argv) {
 	}
 
     link->init();
-	//broadcast->init();
+	beb_broadcast->init();
 
     //broadcast messages
     printf("Broadcasting messages.\n");
 
-//    for (int i = 1; i <= number_of_messages; i++) {
-//        message msg;
-//        msg.ack = false;
-//        msg.seq_number = i;
-//        msg.proc_number = process_number;
-//        msg.payload = to_string(i);
-//        broadcast->beb_broadcast(msg);
-//    }
+    for (int i = 1; i <= number_of_messages; i++) {
+        message msg(false, i, link->get_process_number(), "");
+        broadcast_message broad_msg (i, link->get_process_number(), msg);
+        beb_broadcast->beb_broadcast(broad_msg);
+    }
 
-//    usleep(20000000);
+    usleep(20000000);
 
     // Test Perfect Link
 	// Try to send a lot of messages at the time.
-	for (int i = 1; i<=number_of_processes; i++){
-        if (i != process_number){
-            for (int j = 1; j<=number_of_messages; j++) {
-                cout << "Send message " << j << " from " << process_number << " to " << i << endl;
-                message m(false, j, link->get_process_number(), "");
-                link->send_to(i, m);
-            }
-        }
-    }
+//	for (int i = 1; i<=number_of_processes; i++){
+//        if (i != process_number){
+//            for (int j = 1; j<=number_of_messages; j++) {
+//                cout << "Send message " << j << " from " << process_number << " to " << i << endl;
+//                message m(false, j, link->get_process_number(), "");
+//                link->send_to(i, m);
+//            }
+//        }
+//    }
 
     while(1) {
 		struct timespec sleep_time;
