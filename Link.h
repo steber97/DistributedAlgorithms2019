@@ -35,6 +35,8 @@ extern queue<pair<int,message>> outgoing_messages;
 
 extern vector<vector<bool>> acks;
 
+extern vector<vector<bool>> pl_delivered;  // Delivered by perfect link.
+
 
 /**
  * Run sender: it is run by a single thread,

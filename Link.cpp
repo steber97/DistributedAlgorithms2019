@@ -10,6 +10,8 @@ queue<pair<int,message>> outgoing_messages;
 
 vector<vector<bool>> acks;
 
+vector<vector<bool>> pl_delivered;  // delivered by perfect links.
+
 
 Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id) {
     this->sockfd = sockfd;
@@ -87,7 +89,9 @@ message Link::get_next_message(){
         incoming_messages.pop();
         queue_locked = false;
         cv_receiver.notify_one();
+        // TODO: think about mtx_pl_delivered: it should be useless!
         return msg;
+
     }
 }
 
@@ -138,13 +142,13 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
             mtx_sender.unlock();
         }
         // wait a bit before sending the new message.
-        usleep(10000);
+        usleep(1000);
     }
 }
 
 
 void run_receiver(Link *link) {
-    while(true){
+    while (true) {
         unsigned int len;
         char buf[1024];
         struct sockaddr_in sender_addr;
@@ -154,7 +158,7 @@ void run_receiver(Link *link) {
 
         message msg = parse_message(string(buf));
 
-        cout << "\nNew message: [pn=" << msg.proc_number << ", sn=" << msg.seq_number << "] by process " << link->get_process_number() << endl;
+        // cout << "\nNew message: [pn=" << msg.proc_number << ", sn=" << msg.seq_number << "] by process " << link->get_process_number() << endl;
 
         // Put the message in the queue.
         unique_lock<mutex> lck(mtx_receiver);
