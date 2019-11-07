@@ -99,10 +99,10 @@ int main(int argc, char** argv) {
     //Broadcast* broadcast = new Broadcast(link, number_of_processes, number_of_messages);
 
     // Resize the number of acks (at the perfect link layer)
-    acks.resize(number_of_processes+1, unordered_set<pair<int,int>, pair_hash>());
+    acks.resize(number_of_processes+1, unordered_set<long long>());
 
     // Resize the delivered messages matrix (at the perfect link layer) It is used to avoid duplicates.
-    pl_delivered.resize(number_of_processes+1, unordered_set<pair<int,int>, pair_hash>());
+    pl_delivered.resize(number_of_processes+1, unordered_set<long long>());
 
     //wait until start signal
 	while(wait_for_start) {

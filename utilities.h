@@ -57,6 +57,7 @@ struct broadcast_message  {
 struct message  {
     bool ack;
     int proc_number;
+    long long seq_number;   // This sequence number has nothing to do with the sequence number of the broadcast level!
     broadcast_message payload;
 
     message(bool ack, int proc_number, broadcast_message &payload): payload(payload) {
@@ -65,6 +66,16 @@ struct message  {
         this->proc_number = proc_number;
         this->payload = payload;
     }
+
+    // Overloading of constructor with the sequence number.
+    message(bool ack, int proc_number, long long seq_n, broadcast_message &payload): payload(payload) {
+        // Constructor.
+        this->ack = ack;
+        this->proc_number = proc_number;
+        this->payload = payload;
+        this->seq_number = seq_n;
+    }
+
 };
 
 

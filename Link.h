@@ -27,14 +27,6 @@
 
 using namespace std;
 
-// code freely adapted by https://stackoverflow.com/questions/15160889/how-can-i-make-an-unordered-set-of-pairs-of-integers-in-c
-struct pair_hash {
-    // only define the hash, as the equal operator is already defined in c++! :)
-    inline size_t operator()(const pair<int,int> & v) const {
-        return (v.first<<10) + v.second;
-    }
-};
-
 
 extern mutex mtx_receiver, mtx_sender, mtx_acks;
 extern condition_variable cv_receiver;
@@ -46,9 +38,9 @@ extern queue<pair<int,message>> outgoing_messages;
 // the vector is indexed by the process number in the perfect link message
 // the pair is made of the sender and the sequence number in the broadcast message.
 
-extern vector<unordered_set<pair<int,int>, pair_hash>> acks;  // acks
+extern vector<unordered_set<long long int>> acks;  // acks
 
-extern vector<unordered_set<pair<int,int>, pair_hash>> pl_delivered;  // Delivered by perfect link.
+extern vector<unordered_set<long long int>> pl_delivered;  // Delivered by perfect link.
 
 
 /**
@@ -66,6 +58,7 @@ private:
     int sockfd;
     int process_number;
     unordered_map<int, pair<string, int>>* socket_by_process_id;
+    vector<long long> last_seq_number;
 public:
     Link(int sockfd, int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id);
     void init();

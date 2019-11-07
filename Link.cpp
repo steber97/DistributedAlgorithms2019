@@ -5,19 +5,18 @@ bool queue_locked = false;
 mutex mtx_receiver, mtx_sender, mtx_acks;
 condition_variable cv_receiver;
 queue<message> incoming_messages;
-
 queue<pair<int,message>> outgoing_messages;
 
-vector<unordered_set<pair<int,int>, pair_hash>> acks;  // acks
+vector<unordered_set<long long int>> acks;  // acks
 
-vector<unordered_set<pair<int,int>, pair_hash>> pl_delivered;  // Delivered by perfect link.
-
+vector<unordered_set<long long int>> pl_delivered;
 
 
 Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id) {
     this->sockfd = sockfd;
     this->process_number = process_number;
     this->socket_by_process_id = socket_by_process_id;
+    this->last_seq_number.resize(this->socket_by_process_id->size() + 1, 0LL);  // Initialize all sequence numbers to zero.
 }
 
 
@@ -43,15 +42,21 @@ int Link::get_process_number() {
  * Format of messages:
  * - 1 bit for ack: 0 normal message, 1 ack.
  *
+ * CAREFUL HERE: the message is not ready to run,
+ *              first it must be added the sequence number.
+ *
  * This method only puts the message in the queue of outgoing messages, so that the sender can send it.
  * @param d_process_number destination address.
  * @param msg the message to send
- * @param sequence_number the sequence number of the message.
  */
 void Link::send_to(int d_process_number, message& msg) {
     // At the moment, we keep a queue of messages to send and not acked yet.
     // Sending a message consist easily in putting a new message in the queue, and
     // wait until the run_sender method sends it.
+
+    // Before doing it, we must choose a proper sequence number.
+    long long seq_number = this->last_seq_number[d_process_number] ++;
+    msg.seq_number = seq_number;
     mtx_sender.lock();
     outgoing_messages.push({d_process_number, msg});
     mtx_sender.unlock();
@@ -63,7 +68,7 @@ void Link::send_ack(message msg) {
     int source_process = process_number;
     int dest_process = msg.proc_number;
 
-    message ack_message(true, source_process, msg.payload);
+    message ack_message(true, source_process, msg.seq_number, msg.payload);
 
     struct sockaddr_in d_addr;
 
@@ -105,13 +110,13 @@ message Link::get_next_message(){
             // we received an ack;
             // cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
             mtx_acks.lock();
-            acks[msg.proc_number].insert({msg.payload.sender, msg.payload.seq_number});
-            mtx_acks.unlock();;
+            acks[msg.proc_number].insert(msg.seq_number);
+            mtx_acks.unlock();
         } else {
             this->send_ack(msg);
             // Check if it has not been delivered already
-            if (pl_delivered[msg.proc_number].find({msg.payload.sender, msg.payload.seq_number}) == pl_delivered[msg.proc_number].end()) {
-                pl_delivered[msg.proc_number].insert({msg.payload.sender, msg.payload.seq_number});
+            if (pl_delivered[msg.proc_number].find(msg.seq_number) == pl_delivered[msg.proc_number].end()) {
+                pl_delivered[msg.proc_number].insert(msg.seq_number);
                 return msg;
             }
         }
@@ -131,7 +136,7 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
             mtx_sender.unlock();
 
             mtx_acks.lock();
-            if (acks[dest_and_msg.first].find({dest_and_msg.second.payload.sender, dest_and_msg.second.payload.seq_number}) == acks[dest_and_msg.first].end()){
+            if (acks[dest_and_msg.first].find(dest_and_msg.second.seq_number) == acks[dest_and_msg.first].end()){
                 // Send only if the ack hasn't been received
                 mtx_acks.unlock();
                 string msg_s = to_string(dest_and_msg.second);

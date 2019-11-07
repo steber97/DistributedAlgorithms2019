@@ -40,7 +40,8 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
  * broadcast: original_sender-seq_number
  *
  * for instance, the message
- * 0-3/5-3  means a normal message (ack = 1) sent by process 3, which brings the message 3 originally sent by 5.
+ * 0-3-1/5-3  means a normal message (ack = 1) sent by process 3 with sequence number pp2p 1,
+ * which brings the message 3 originally sent by 5.
  * @param str
  * @return
  */
@@ -73,7 +74,7 @@ message parse_message(string str) {
 
     bool ack = stoi(cont1[0]);
     int proc_number = stoi(cont1[1]);
-
+    long long seq_number_pp2p = stoll(cont1[2]);
 
     // parse the broadcast message.
     previous = 0;
@@ -91,7 +92,7 @@ message parse_message(string str) {
     int seq_number_broad = stoi(cont2[1]);
 
     broadcast_message bm (seq_number_broad, sender);
-    message m(ack, proc_number, bm);
+    message m(ack, proc_number, seq_number_pp2p, bm);
 
     return m;
 }
@@ -99,17 +100,18 @@ message parse_message(string str) {
 
 /**
  * returns a string of the format:
- * 0-1/5-6
+ * 0-1-3/5-6
  * the first part (before /) is the perfect link message.
  * the second part is the broadcast part.
  *
- * ack - process / original_sender - sequence_number  (without whitespace)
+ * ack - process - seq_number (its long long) / original_sender - sequence_number  (without whitespace)
  * @param msg
  * @return
  */
 string to_string(message msg){
-    return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "/" + to_string(msg.payload.sender)
-                                + "-" + to_string(msg.payload.seq_number);
+    return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number)
+                + "/" + to_string(msg.payload.sender)
+                + "-" + to_string(msg.payload.seq_number);
 }
 
 
