@@ -9,7 +9,7 @@ UrBroadcast::UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_o
     this->beb = beb;
     this->number_of_processes = number_of_processes;
     this->number_of_messages = number_of_messages;
-    this->urb_delivering_queue = new queue<urb_message>;
+    this->urb_delivering_queue = new queue<b_message>;
 }
 
 
@@ -19,7 +19,7 @@ void UrBroadcast::init() {
 }
 
 
-void UrBroadcast::urb_broadcast(urb_message &msg)  {
+void UrBroadcast::urb_broadcast(b_message &msg)  {
     this->mtx_forward.lock();
     this->forward.insert({msg.first_sender, msg.seq_number});
     this->mtx_forward.unlock();
@@ -28,7 +28,7 @@ void UrBroadcast::urb_broadcast(urb_message &msg)  {
 }
 
 
-void UrBroadcast::urb_deliver(urb_message &msg) {
+void UrBroadcast::urb_deliver(b_message &msg) {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
     cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue_locked; });
     urb_delivering_queue_locked = true;
@@ -38,11 +38,11 @@ void UrBroadcast::urb_deliver(urb_message &msg) {
 }
 
 
-urb_message UrBroadcast::get_next_message() {
+b_message UrBroadcast::get_next_message() {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
     cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue->empty(); });
     urb_delivering_queue_locked = true;
-    urb_message next_message = this->urb_delivering_queue->front();
+    b_message next_message = this->urb_delivering_queue->front();
     this->urb_delivering_queue->pop();
     urb_delivering_queue_locked = false;
     cv_urb_delivering_queue.notify_all();
@@ -50,7 +50,7 @@ urb_message UrBroadcast::get_next_message() {
 }
 
 
-bool UrBroadcast::is_delivered(urb_message &msg) {
+bool UrBroadcast::is_delivered(b_message &msg) {
     this->mtx_delivered.lock();
     bool is_delivered = (this->delivered.find({msg.first_sender, msg.seq_number}) != delivered.end());
     this->mtx_delivered.unlock();
@@ -58,7 +58,7 @@ bool UrBroadcast::is_delivered(urb_message &msg) {
 }
 
 
-int UrBroadcast::acks_received(urb_message &msg) {
+int UrBroadcast::acks_received(b_message &msg) {
     this->mtx_acks.lock();
     int n_acks = this->acks[{msg.first_sender, msg.seq_number}];
     this->mtx_acks.unlock();
@@ -66,7 +66,7 @@ int UrBroadcast::acks_received(urb_message &msg) {
 }
 
 
-void UrBroadcast::addDelivered(urb_message &msg) {
+void UrBroadcast::addDelivered(b_message &msg) {
     this->mtx_delivered.lock();
     this->delivered.insert({msg.first_sender, msg.seq_number});
     this->mtx_delivered.unlock();
@@ -88,7 +88,7 @@ void handle_beb_delivery(UrBroadcast *urb) {
         unique_lock<mutex> lck(mtx_beb_urb);
         cv_beb_urb.wait(lck, [&] { return !queue_beb_urb.empty(); });
         queue_beb_urb_locked = true;
-        urb_message msg = queue_beb_urb.front();
+        b_message msg = queue_beb_urb.front();
         queue_beb_urb.pop();
         queue_beb_urb_locked = false;
         cv_beb_urb.notify_one();

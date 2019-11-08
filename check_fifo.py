@@ -15,7 +15,7 @@ with open(sys.argv[1]) as f:
         if tokens[0] == 'b':
             msg = int(tokens[1])
             if msg != i:
-                print("Line {0}: Messages broadcast out of order. Expected pp2p_message {1} but broadcast pp2p_message {2}".format(l, i, msg))
+                print("Line {0}: Messages broadcast out of order. Expected message {1} but broadcast pp2p_message {2}".format(l, i, msg))
                 sys.exit(1)
             i += 1
 
@@ -24,7 +24,7 @@ with open(sys.argv[1]) as f:
             sender = int(tokens[1])
             msg = int(tokens[2])
             if msg != nextMessage[sender]:
-                print("Line {0}: Message delivered out of order. Expected pp2p_message {1}, but delivered pp2p_message {2}".format(l, nextMessage[sender], msg))
+                print("Line {0}: Message delivered out of order. Expected message {1}, but delivered pp2p_message {2}".format(l, nextMessage[sender], msg))
                 sys.exit(1)
             else:
                 nextMessage[sender] = msg + 1

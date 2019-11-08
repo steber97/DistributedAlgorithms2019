@@ -6,7 +6,7 @@ vector<string> log_actions;
 
 // This is the mutex used to communicate with the shared queue between the urb and the beb.
 mutex mtx_beb_urb;
-queue<urb_message> queue_beb_urb;
+queue<b_message> queue_beb_urb;
 bool queue_beb_urb_locked = false;
 condition_variable cv_beb_urb;
 
@@ -62,7 +62,7 @@ pp2p_message parse_message(string str) {
     cont_outer.push_back(str.substr(previous, current - previous));
 
     // We need to have a message with size 2 (is like making the split by '/' in python).
-    assert(cont_outer.size() == 3);
+    assert(cont_outer.size() == 2);
 
     // Parse the perfect link message
     previous = 0;
@@ -115,7 +115,7 @@ pp2p_message parse_message(string str) {
     fb_message rcob_msg(clocks, cont3[cont3.size() - 1]);
      */
 
-    urb_message urb_msg(seq_number_broad, sender);
+    b_message urb_msg(seq_number_broad, sender);
     pp2p_message pp2p_msg(ack, seq_number_pp2p, proc_number, urb_msg);
 
     return pp2p_msg;
@@ -140,10 +140,10 @@ string to_string(pp2p_message msg){
 
 /**
  * Appends the broadcast log to the list of activities.
- * @param m the broadcast message to log
+ * @param msg the broadcast message to log
  */
-void urb_broadcast_log(urb_message& m) {
-    string log_msg = "b " + to_string(m.seq_number) ;
+void urb_broadcast_log(b_message& msg) {
+    string log_msg = "b " + to_string(msg.seq_number) ;
     mtx_log.lock();
     // Append the broadcast log message
     log_actions.push_back(log_msg);
@@ -153,12 +153,12 @@ void urb_broadcast_log(urb_message& m) {
 
 /**
  * Appends the broadcast delivery to the list of activities.
- * @param m
+ * @param msg
  * @param sender
  * @return
  */
-void urb_delivery_log(urb_message& m) {
-    string log_msg = "d " + to_string(m.first_sender) + " " + to_string(m.seq_number);
+void urb_delivery_log(b_message& msg) {
+    string log_msg = "d " + to_string(msg.first_sender) + " " + to_string(msg.seq_number);
     mtx_log.lock();
     log_actions.push_back(log_msg);
     mtx_log.unlock();

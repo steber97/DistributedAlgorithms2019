@@ -15,8 +15,8 @@ private:
 public:
     BeBroadcast(Link* link, int number_of_processes, int number_of_messages);
     void init();
-    void beb_broadcast(urb_message &msg);
-    void beb_deliver(urb_message &msg);
+    void beb_broadcast(b_message &msg);
+    void beb_deliver(b_message &msg);
 };
 
 void run_deliverer_beb(Link* link, BeBroadcast* beb_broadcast);
