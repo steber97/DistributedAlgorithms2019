@@ -20,6 +20,7 @@ void UrBroadcast::init() {
 
 
 void UrBroadcast::urb_broadcast(b_message &msg)  {
+    urb_broadcast_log(msg);
     this->mtx_forward.lock();
     this->forward.insert({msg.first_sender, msg.seq_number});
     this->mtx_forward.unlock();
@@ -35,6 +36,8 @@ void UrBroadcast::urb_deliver(b_message &msg) {
     this->urb_delivering_queue->push(msg);
     urb_delivering_queue_locked = false;
     cv_urb_delivering_queue.notify_all();
+
+    urb_delivery_log(msg);
 }
 
 

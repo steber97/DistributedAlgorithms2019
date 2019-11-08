@@ -4,9 +4,9 @@ init_time=2
 time_to_finish=10
 
 
-processes_to_kill="2 3 4"
+processes_to_kill="2 4 9 5 11 3"
 number_of_processes=15
-number_of_messages=15
+number_of_messages=10
 
 python3 generate_membership_file.py $number_of_processes $number_of_messages
 
