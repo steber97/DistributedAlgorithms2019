@@ -98,7 +98,7 @@ b_message FifoBroadcast::get_next_fifo_delivered() {
 
 
 void handle_urb_delivered(FifoBroadcast *fb) {
-    while (!check_concurrency_stop(mtx_fifo, stop_fifo)) {
+    while (true) {
         b_message msg = fb->get_next_urb_delivered();
         pair<int, int> pend_msg(msg.first_sender, msg.seq_number);
         fb->push_pending(pend_msg);

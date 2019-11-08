@@ -42,7 +42,7 @@ void BeBroadcast::beb_deliver(b_message &msg) {
  * @param number_of_processes
  */
 void run_deliverer_beb(Link* link, BeBroadcast* be_broadcast){
-    while(!check_concurrency_stop(mtx_beb, stop_beb)) {
+    while(true) {
         pp2p_message msg = link->get_next_message();
         // the broadcast pp2p_message that the beb delivery gets
         // is with same first_sender and seq number of the pp2p pp2p_message.
