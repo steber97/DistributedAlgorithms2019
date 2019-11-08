@@ -16,7 +16,6 @@ static int wait_for_start = 1;
 
 int process_number;
 
-
 static void start(int signum) {
 	wait_for_start = 0;
 }
@@ -41,7 +40,7 @@ static void stop(int signum) {
         out << line << endl;
     }
     mtx_log.unlock();
-
+    cout << "Finish to write output " << endl;
     // Give time to every detached thread
     sleep(5);
 
@@ -129,11 +128,26 @@ int main(int argc, char** argv) {
 
     for (int i = 1; i <= number_of_messages; i++) {
         b_message msg (i, link->get_process_number());
-        //beb->beb_broadcast(broad_msg);
+        //beb->beb_broadcast(msg);
         //urb->urb_broadcast(msg);
         fb->fb_broadcast(msg);
     }
-
+//
+//    // Try to send a lot of messages at the time.
+//    for (int i = 1; i<=number_of_processes; i++){
+//        b_message msg (i, link->get_process_number());
+//        if (i != process_number){
+//            for (int j = 1; j<=number_of_messages; j++) {
+//                pp2p_message m(false, j, link->get_process_number(), msg);
+//                link->send_to(i, m);
+//            }
+//        }
+//    }
+//
+//    while(true){
+//        pp2p_message m = link->get_next_message();
+//    }
+//
     while(1) {
 		struct timespec sleep_time;
 		sleep_time.tv_sec = 1;

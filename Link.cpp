@@ -198,4 +198,5 @@ void run_receiver(Link *link) {
         queue_locked = false;
         cv_receiver.notify_one();
     }
+    cout << "detached receiver" << endl;
 }
