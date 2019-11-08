@@ -42,6 +42,21 @@ static void stop(int signum) {
     }
     mtx_log.unlock();
 
+    mtx_pp2p.lock();
+    stop_pp2p = true;
+    mtx_pp2p.unlock();
+
+    mtx_beb.lock();
+    stop_beb = true;
+    mtx_beb.unlock();
+
+    mtx_urb.lock();
+    stop_urb = true;
+    mtx_urb.unlock();
+
+    mtx_fifo.lock();
+    stop_fifo = true;
+    mtx_fifo.unlock();
 
 	//exit directly from signal handler
 	exit(0);
@@ -127,23 +142,10 @@ int main(int argc, char** argv) {
 
     for (int i = 1; i <= number_of_messages; i++) {
         b_message msg (i, link->get_process_number());
-        fb->fb_broadcast(msg);
-        //urb->urb_broadcast(msg);
         //beb->beb_broadcast(broad_msg);
-
+        //urb->urb_broadcast(msg);
+        fb->fb_broadcast(msg);
     }
-
-    // Test Perfect Link
-	// Try to send a lot of messages at the time.
-//	for (int i = 1; i<=number_of_processes; i++){
-//        if (i != my_process_number){
-//            for (int j = 1; j<=number_of_messages; j++) {
-//                cout << "Send pp2p_message " << j << " from " << my_process_number << " to " << i << endl;
-//                pp2p_message m(false, j, link->get_process_number(), "");
-//                link->send_to(i, m);
-//            }
-//        }
-//    }
 
     while(1) {
 		struct timespec sleep_time;

@@ -20,7 +20,7 @@ void UrBroadcast::init() {
 
 
 void UrBroadcast::urb_broadcast(b_message &msg)  {
-    urb_broadcast_log(msg);
+    //urb_broadcast_log(msg);
     this->mtx_forward.lock();
     this->forward.insert({msg.first_sender, msg.seq_number});
     this->mtx_forward.unlock();
@@ -37,7 +37,7 @@ void UrBroadcast::urb_deliver(b_message &msg) {
     urb_delivering_queue_locked = false;
     cv_urb_delivering_queue.notify_all();
 
-    urb_delivery_log(msg);
+    //urb_delivery_log(msg);
 }
 
 
@@ -86,7 +86,7 @@ void handle_beb_delivery(UrBroadcast *urb) {
      * This method gets messages from the shared queue among BEB and URB
      * It is the way URB can interact with BEB.
      */
-    while (true) {
+    while (!check_concurrency_stop(mtx_urb, stop_urb)) {
         // First retrieves the message from the queue.
         unique_lock<mutex> lck(mtx_beb_urb);
         cv_beb_urb.wait(lck, [&] { return !queue_beb_urb.empty(); });

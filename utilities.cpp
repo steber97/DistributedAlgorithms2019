@@ -10,6 +10,19 @@ queue<b_message> queue_beb_urb;
 bool queue_beb_urb_locked = false;
 condition_variable cv_beb_urb;
 
+mutex mtx_pp2p, mtx_beb, mtx_urb, mtx_fifo;
+bool stop_pp2p = false;
+bool stop_beb = false;
+bool stop_urb = false;
+bool stop_fifo = false;
+
+bool check_concurrency_stop(mutex& mtx, bool& variable){
+    mtx.lock();
+    bool res = variable;
+    mtx.unlock();
+    return res;
+}
+
 /**
  * Parses the input file
  * @param membership_file the file to parse

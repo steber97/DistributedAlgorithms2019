@@ -169,9 +169,15 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
     }
 }
 
+bool check_concurrency_variable(mutex& mtx, bool& variable){
+    mtx.lock();
+    bool res = variable;
+    mtx.unlock();
+    return res;
+}
 
 void run_receiver(Link *link) {
-    while (true) {
+    while (!check_concurrency_stop(mtx_pp2p, stop_pp2p)) {
         unsigned int len;
         char buf[1024];
         struct sockaddr_in sender_addr;
