@@ -62,7 +62,7 @@ pp2p_message parse_message(string str) {
     cont_outer.push_back(str.substr(previous, current - previous));
 
     // We need to have a message with size 2 (is like making the split by '/' in python).
-    assert(cont_outer.size() == 3);
+    assert(cont_outer.size() == 2);
 
     // Parse the perfect link message
     previous = 0;

@@ -10,14 +10,13 @@ def compute_correct_processes(wrong_processes):
     return correct_processes
 
 
-def check_validity(wrong_processes, broadcast, delivered, number_of_processes, number_of_messages):
+def check_validity(wrong_processes, broadcast, delivered, number_of_processes, number_of_messages, wrong):
     """
     If pi and pj are correct, then evey message broadcasted by pi is eventually
     delivered by pj.
     :param wrong_processes:
     :return:
     """
-    wrong = False
     correct_processes = compute_correct_processes(wrong_processes)
 
     print("correct processes", str(correct_processes))
@@ -35,7 +34,7 @@ def check_validity(wrong_processes, broadcast, delivered, number_of_processes, n
     return wrong
 
 
-def check_no_creation(wrong_messages, broadcast, delivered, number_of_processes, number_of_messages):
+def check_no_creation(wrong_messages, broadcast, delivered, number_of_processes, number_of_messages, wrong):
     """
     No message is delivered if it was not sent.
     :param wrong_messages:
@@ -45,7 +44,6 @@ def check_no_creation(wrong_messages, broadcast, delivered, number_of_processes,
     :param number_of_messages:
     :return:
     """
-    wrong = False
     for i, deliv_pi in enumerate(delivered):
         for j, deliv_pj in enumerate(deliv_pi):
             for k, m in enumerate(deliv_pj):
@@ -57,7 +55,7 @@ def check_no_creation(wrong_messages, broadcast, delivered, number_of_processes,
     return wrong
 
 
-def check_urb4(wrong_messages, broadcast, delivered, number_of_processes, number_of_messages):
+def check_urb4(wrong_messages, broadcast, delivered, number_of_processes, number_of_messages, wrong):
     """
     for any message m, if a process delivers m, then every correct process delivers message m
     :param wrong_messages:
@@ -68,7 +66,6 @@ def check_urb4(wrong_messages, broadcast, delivered, number_of_processes, number
     :return:
     """
     correct_processes = compute_correct_processes(wrong_processes)
-    wrong = False
     for i, deliv_pi in enumerate(delivered):
         for j, deliv_pj in enumerate(deliv_pi):
             for k, m in enumerate(deliv_pj):
@@ -132,9 +129,9 @@ if __name__=="__main__":
         delivered.append(delivered_pi)
 
 
-    wrong = check_validity(wrong_processes, broadcast, delivered, number_of_processes, number_of_messages)
-    wrong = check_no_creation(wrong_processes, broadcast, delivered, number_of_processes, number_of_messages)
-    wrong = check_urb4(wrong_processes, broadcast, delivered, number_of_processes, number_of_messages)
+    wrong = check_validity(wrong_processes, broadcast, delivered, number_of_processes, number_of_messages, wrong)
+    wrong = check_no_creation(wrong_processes, broadcast, delivered, number_of_processes, number_of_messages, wrong)
+    wrong = check_urb4(wrong_processes, broadcast, delivered, number_of_processes, number_of_messages, wrong)
 
     if not wrong:
         print("Brilliant :)")
