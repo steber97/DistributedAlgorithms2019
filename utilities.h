@@ -10,6 +10,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <queue>
+#include <assert.h>
 
 using namespace std;
 
@@ -21,19 +22,13 @@ extern vector<string> log_actions;
  * This is the message used at FIFO broadcast level
  * It contains a vector of clocks and the actual content of the message
  */
-struct rcob_message {
-    vector<int> clocks;
+struct fb_message {
+    int seq_number;
     string payload;
 
-    rcob_message(){
-        this->clocks = *(new vector<int>);
+    fb_message(){
+        this->seq_number = 0;
         this->payload = "";
-    }
-
-    rcob_message(vector<int> &clocks, string &payload) {
-        // Constructor.
-        this->clocks = clocks;
-        this->payload = payload;
     }
 };
 
@@ -53,25 +48,16 @@ struct urb_message  {
     // for example, we may have process 1 broadcasting message 3 received by process 2.
     // In this case, even if the message is broadcasted by 1, the sender is going to be 2.
     int first_sender;    // initial sender of the message.
-    rcob_message payload;
 
     urb_message(){
         this->seq_number = 0;
         this->first_sender = 0;
-        this->payload = *(new rcob_message());
     }
 
     urb_message(int seq_number, int first_sender) {
         // Constructor.
         this->seq_number = seq_number;
         this->first_sender = first_sender;
-    }
-
-    urb_message(int seq_number, int first_sender, rcob_message &payload) {
-        // Constructor.
-        this->seq_number = seq_number;
-        this->first_sender = first_sender;
-        this->payload = payload;
     }
 };
 

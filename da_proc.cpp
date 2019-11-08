@@ -132,9 +132,9 @@ int main(int argc, char** argv) {
     // Test Perfect Link
 	// Try to send a lot of messages at the time.
 //	for (int i = 1; i<=number_of_processes; i++){
-//        if (i != process_number){
+//        if (i != my_process_number){
 //            for (int j = 1; j<=number_of_messages; j++) {
-//                cout << "Send pp2p_message " << j << " from " << process_number << " to " << i << endl;
+//                cout << "Send pp2p_message " << j << " from " << my_process_number << " to " << i << endl;
 //                pp2p_message m(false, j, link->get_process_number(), "");
 //                link->send_to(i, m);
 //            }

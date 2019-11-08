@@ -1,5 +1,3 @@
-#include <cassert>
-#include <assert.h>
 #include "utilities.h"
 
 // these are used to cover the logging functions
@@ -97,7 +95,7 @@ pp2p_message parse_message(string str) {
     int sender = stoi(cont2[0]);
     int seq_number_broad = stoi(cont2[1]);
 
-    // parse the rco_broadcast
+    /* parse the fifo_broadcast
     previous = 0;
     vector<string> cont3;
     delim = '-';
@@ -114,7 +112,9 @@ pp2p_message parse_message(string str) {
         clocks[i] = stoi(cont3[i]);
     }
 
-    rcob_message rcob_msg(clocks, cont3[cont3.size() - 1]);
+    fb_message rcob_msg(clocks, cont3[cont3.size() - 1]);
+     */
+
     urb_message urb_msg(seq_number_broad, sender);
     pp2p_message pp2p_msg(ack, seq_number_pp2p, proc_number, urb_msg);
 
@@ -124,26 +124,17 @@ pp2p_message parse_message(string str) {
 
 /**
  * returns a string of the format:
- * 0-1-3/5-6/7-8-9
+ * 0-1-3/5-6
  * the first part (before /) is the perfect link message
  * the second is the uniform broadcast part
- * the third is the reliable causal order broadcast part
  *
- * ack - process - seq_number (its long long) / original_sender - sequence_number /
- * clocks(vector where elements are separated by "-") - payload (without whitespaces)
+ * ack - process - seq_number (its long long) / original_sender - sequence_number (without whitespaces)
  * @param msg
  * @return
  */
 string to_string(pp2p_message msg){
-    vector<int> clocks(msg.payload.payload.clocks);
-    string clocks_string;
-    for (int clock : clocks) {
-        clocks_string += (to_string(clock) + "-");
-    }
-
     return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number)
-                + "/" + to_string(msg.payload.first_sender) + "-" + to_string(msg.payload.seq_number)
-                + "/" + clocks_string + msg.payload.payload.payload;
+                + "/" + to_string(msg.payload.first_sender) + "-" + to_string(msg.payload.seq_number);
 }
 
 
@@ -168,33 +159,6 @@ void urb_broadcast_log(urb_message& m) {
  */
 void urb_delivery_log(urb_message& m) {
     string log_msg = "d " + to_string(m.first_sender) + " " + to_string(m.seq_number);
-    mtx_log.lock();
-    log_actions.push_back(log_msg);
-    mtx_log.unlock();
-}
-
-
-/**
- * Appends the broadcast log to the list of activities.
- * @param m the broadcast message to log
- */
-void rcob_broadcast_log(rcob_message& msg) {
-    string log_msg = "b " + msg.payload ;
-    mtx_log.lock();
-    // Append the broadcast log message
-    log_actions.push_back(log_msg);
-    mtx_log.unlock();
-}
-
-
-/**
- * Appends the broadcast delivery to the list of activities.
- * @param m
- * @param sender
- * @return
- */
-void rcob_delivery_log(int sender, rcob_message& msg) {
-    string log_msg = "d " + to_string(sender) + " " + msg.payload;
     mtx_log.lock();
     log_actions.push_back(log_msg);
     mtx_log.unlock();
