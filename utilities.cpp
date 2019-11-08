@@ -19,15 +19,15 @@ condition_variable cv_beb_urb;
  *          - the total number of message to be sent by each process
  *          - a map that contains info on ip and port for each process
  */
-pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membership_file){
+pair<int, unordered_map<int, pair<string, int>> *> parse_input_data(string &membership_file) {
     unordered_map<int, pair<string, int>> *socket_by_process_id = new(unordered_map<int, pair<string, int>>);
     ifstream mem_in(membership_file);
-    int number_of_processes ;
+    int number_of_processes;
     mem_in >> number_of_processes;
     int pr_n;
     string ip;
     int port;
-    for (int i = 0; i<number_of_processes; i++){
+    for (int i = 0; i < number_of_processes; i++) {
         mem_in >> pr_n;
         mem_in >> ip;
         mem_in >> port;
@@ -64,7 +64,7 @@ pp2p_message parse_message(string str) {
     cont_outer.push_back(str.substr(previous, current - previous));
 
     // We need to have a message with size 2 (is like making the split by '/' in python).
-    assert(cont_outer.size() == 2);
+    assert(cont_outer.size() == 3);
 
     // Parse the perfect link message
     previous = 0;
@@ -82,7 +82,7 @@ pp2p_message parse_message(string str) {
     int proc_number = stoi(cont1[1]);
     long long seq_number_pp2p = stoll(cont1[2]);
 
-    // parse the broadcast message.
+    // parse the ur_broadcast message.
     previous = 0;
     vector<string> cont2;
     delim = '-';
@@ -97,9 +97,26 @@ pp2p_message parse_message(string str) {
     int sender = stoi(cont2[0]);
     int seq_number_broad = stoi(cont2[1]);
 
-    // todo parse the rcob_message
-    urb_message urb_msg (seq_number_broad, sender);
-    pp2p_message pp2p_msg(ack, proc_number, urb_msg);
+    // parse the rco_broadcast
+    previous = 0;
+    vector<string> cont3;
+    delim = '-';
+    current = cont_outer[2].find(delim);
+    while (current != string::npos) {
+        cont3.push_back(cont_outer[2].substr(previous, current - previous));
+        previous = current + 1;
+        current = cont_outer[2].find(delim, previous);
+    }
+    cont3.push_back(cont_outer[2].substr(previous, current - previous));
+
+    vector<int> clocks(cont3.size() - 1);
+    for (size_t i = 0; i < cont3.size() - 1; i++) {
+        clocks[i] = stoi(cont3[i]);
+    }
+
+    rcob_message rcob_msg(clocks, cont3[cont3.size() - 1]);
+    urb_message urb_msg(seq_number_broad, sender);
+    pp2p_message pp2p_msg(ack, seq_number_pp2p, proc_number, urb_msg);
 
     return pp2p_msg;
 }
@@ -107,18 +124,26 @@ pp2p_message parse_message(string str) {
 
 /**
  * returns a string of the format:
- * 0-1-3/5-6
- * the first part (before /) is the perfect link message.
- * the second part is the broadcast part.
+ * 0-1-3/5-6/7-8-9
+ * the first part (before /) is the perfect link message
+ * the second is the uniform broadcast part
+ * the third is the reliable causal order broadcast part
  *
- * ack - process - seq_number (its long long) / original_sender - sequence_number  (without whitespace)
+ * ack - process - seq_number (its long long) / original_sender - sequence_number /
+ * clocks(vector where elements are separated by "-") - payload (without whitespaces)
  * @param msg
  * @return
  */
 string to_string(pp2p_message msg){
+    vector<int> clocks(msg.payload.payload.clocks);
+    string clocks_string;
+    for (int clock : clocks) {
+        clocks_string += (to_string(clock) + "-");
+    }
+
     return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number)
-                + "/" + to_string(msg.payload.first_sender)
-                + "-" + to_string(msg.payload.seq_number);
+                + "/" + to_string(msg.payload.first_sender) + "-" + to_string(msg.payload.seq_number)
+                + "/" + clocks_string + msg.payload.payload.payload;
 }
 
 
@@ -126,7 +151,7 @@ string to_string(pp2p_message msg){
  * Appends the broadcast log to the list of activities.
  * @param m the broadcast message to log
  */
-void broadcast_log(urb_message& m) {
+void urb_broadcast_log(urb_message& m) {
     string log_msg = "b " + to_string(m.seq_number) ;
     mtx_log.lock();
     // Append the broadcast log message
@@ -141,8 +166,35 @@ void broadcast_log(urb_message& m) {
  * @param sender
  * @return
  */
-void delivery_log(urb_message& m) {
+void urb_delivery_log(urb_message& m) {
     string log_msg = "d " + to_string(m.first_sender) + " " + to_string(m.seq_number);
+    mtx_log.lock();
+    log_actions.push_back(log_msg);
+    mtx_log.unlock();
+}
+
+
+/**
+ * Appends the broadcast log to the list of activities.
+ * @param m the broadcast message to log
+ */
+void rcob_broadcast_log(rcob_message& msg) {
+    string log_msg = "b " + msg.payload ;
+    mtx_log.lock();
+    // Append the broadcast log message
+    log_actions.push_back(log_msg);
+    mtx_log.unlock();
+}
+
+
+/**
+ * Appends the broadcast delivery to the list of activities.
+ * @param m
+ * @param sender
+ * @return
+ */
+void rcob_delivery_log(int sender, rcob_message& msg) {
+    string log_msg = "d " + to_string(sender) + " " + msg.payload;
     mtx_log.lock();
     log_actions.push_back(log_msg);
     mtx_log.unlock();

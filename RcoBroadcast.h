@@ -10,19 +10,19 @@ private:
     int process_number;
     int number_or_processes;
     vector<int> *clocks;
-    queue<rcob_message> *pending;
-    queue<rcob_message> *rcob_delivering_queue;
+    queue<pair<int, rcob_message>> *pending;
+    queue<pair<int, rcob_message>> *rcob_delivering_queue;
 
 public:
     RcoBroadcast(UrBroadcast* urb,  int process_number, int number_of_processes);
     void init();
     void rcob_broadcast(rcob_message &msg);
-    void rcob_deliver(rcob_message &msg);
+    void rcob_deliver(pair<int, rcob_message> &msg_to_deliver);
     int get_clock(int process);
     void increase_clock(int process);
-    rcob_message front_pending();
+    pair<int, rcob_message> front_pending();
     void pop_pending();
-    void push_pending(rcob_message &msg);
+    void push_pending(int first_sender, rcob_message &msg);
     urb_message get_next_urb_delivered();
     int get_process_number();
     int get_number_or_processes();

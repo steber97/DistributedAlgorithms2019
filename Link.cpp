@@ -69,7 +69,7 @@ void Link::send_ack(pp2p_message msg) {
     int source_process = process_number;
     int dest_process = msg.proc_number;
 
-    pp2p_message ack_message(true, source_process, msg.seq_number, msg.payload);
+    pp2p_message ack_message(true, msg.seq_number, source_process, msg.payload);
 
     struct sockaddr_in d_addr;
 

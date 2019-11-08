@@ -130,8 +130,8 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
 
 string to_string(pp2p_message msg);
 
-void broadcast_log(urb_message& m);
-void delivery_log(urb_message& m);
+void urb_broadcast_log(urb_message& m);
+void urb_delivery_log(urb_message& m);
 
 
 extern condition_variable cv_beb_urb;
