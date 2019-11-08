@@ -31,7 +31,6 @@ unordered_map<int, pair<string, int>> * parse_input_data(string &membership_file
         mem_in >> port;
         (*socket_by_process_id)[pr_n] = {ip, port};
     }
-    int number_of_messages;
     return socket_by_process_id;
 }
 
