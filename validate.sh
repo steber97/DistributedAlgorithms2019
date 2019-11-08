@@ -18,14 +18,14 @@ sudo tc qdisc add dev lo root netem 2>/dev/null
 sudo tc qdisc change dev lo root netem delay 50ms 200ms loss 10% 25% reorder 25% 50%
 
 # create default Makefile if not existing
-#if [ ! -f Makefile ]; then
-#  echo "WARNING: Makefile not found! using default Makefile"
-#  if [ "$2" = "C" ]; then
-#    cp Makefile_c_example Makefile
-#  else
-#    cp Makefile_java_example Makefile
-#  fi
-#fi
+if [ ! -f Makefile ]; then
+  echo "WARNING: Makefile not found! using default Makefile"
+  if [ "$2" = "C" ]; then
+    cp Makefile_c_example Makefile
+  else
+    cp Makefile_java_example Makefile
+  fi
+fi
 
 # compile (should output: da_proc or Da_proc.class)
 make clean
@@ -34,7 +34,7 @@ make
 # prepare input
 if [ "$1" = "FIFO" ]; then
 echo "writing FIFO input..."
- 
+
 echo "5
 1 127.0.0.1 12001
 2 127.0.0.1 12002
@@ -42,9 +42,9 @@ echo "5
 4 127.0.0.1 12004
 5 127.0.0.1 12005" > membership
 
-else 
+else
 echo "writing LCausal input..."
-    
+
 echo "5
 1 127.0.0.1 12001
 2 127.0.0.1 12002

@@ -8,7 +8,7 @@ mutex mtx_pending;
 
 FifoBroadcast::FifoBroadcast(UrBroadcast *urb, int number_of_processes) {
     this->urb = urb;
-    this->next_to_deliver.resize(number_of_processes+1, 1);
+    this->next_to_deliver.resize(number_of_processes, 1);
 }
 
 
@@ -70,8 +70,8 @@ void handle_urb_delivered(FifoBroadcast *fb) {
                 pair<int, int> pending_msg = fb->pending.front();
                 // process number, sequence number.
                 fb->pending.pop();
-                if (pending_msg.second == fb->next_to_deliver[pending_msg.first] ) {
-                    fb->next_to_deliver[pending_msg.first] ++;
+                if (pending_msg.second == fb->next_to_deliver[pending_msg.first-1] ) {
+                    fb->next_to_deliver[pending_msg.first-1] ++;
                     b_message msg_to_deliver(pending_msg.second, pending_msg.first);
                     fb->fb_deliver(msg_to_deliver);
                     stop = false;
