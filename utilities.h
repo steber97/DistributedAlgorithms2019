@@ -19,21 +19,6 @@ extern vector<string> log_actions;
 
 
 /**
- * This is the message used at FIFO broadcast level
- * It contains a vector of clocks and the actual content of the message
- */
-struct fb_message {
-    int seq_number;
-    string payload;
-
-    fb_message(){
-        this->seq_number = 0;
-        this->payload = "";
-    }
-};
-
-
-/**
  * This is the broadcast message, it is used at the broadcast level
  * The sender is not the actual sender, but the initial sender of that message.
  *
@@ -41,7 +26,7 @@ struct fb_message {
  * although it is 3 which is broadcasting. At the message level, instead, the
  * sender is going to be 3.
  */
-struct urb_message  {
+struct b_message  {
 
     int seq_number;  // sequence number of the message
 
@@ -49,12 +34,12 @@ struct urb_message  {
     // In this case, even if the message is broadcasted by 1, the sender is going to be 2.
     int first_sender;    // initial sender of the message.
 
-    urb_message(){
+    b_message(){
         this->seq_number = 0;
         this->first_sender = 0;
     }
 
-    urb_message(int seq_number, int first_sender) {
+    b_message(int seq_number, int first_sender) {
         // Constructor.
         this->seq_number = seq_number;
         this->first_sender = first_sender;
@@ -75,23 +60,23 @@ struct pp2p_message  {
     bool ack;
     int proc_number;
     long long seq_number;   // This sequence number has nothing to do with the sequence number of the broadcast level!
-    urb_message payload;
+    b_message payload;
 
     pp2p_message(){
         this->ack = false;
         this->seq_number = 0;
         this->proc_number = 0;
-        this->payload = *(new urb_message());
+        this->payload = *(new b_message());
     }
 
-    pp2p_message(bool ack, int proc_number, urb_message &payload): payload(payload) {
+    pp2p_message(bool ack, int proc_number, b_message &payload): payload(payload) {
         // Constructor.
         this->ack = ack;
         this->proc_number = proc_number;
         this->payload = payload;
     }
 
-    pp2p_message(bool ack, long long seq_number, int proc_number, urb_message &payload){
+    pp2p_message(bool ack, long long seq_number, int proc_number, b_message &payload){
         // Constructor.
         this->ack = ack;
         this->seq_number = seq_number;
@@ -116,12 +101,12 @@ pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membe
 
 string to_string(pp2p_message msg);
 
-void urb_broadcast_log(urb_message& m);
-void urb_delivery_log(urb_message& m);
+void urb_broadcast_log(b_message& msg);
+void urb_delivery_log(b_message& msg);
 
 
 extern condition_variable cv_beb_urb;
-extern queue<urb_message> queue_beb_urb;
+extern queue<b_message> queue_beb_urb;
 extern mutex mtx_beb_urb;
 extern bool queue_beb_urb_locked;
 

@@ -23,13 +23,13 @@ void FifoBroadcast::init() {
 }
 
 
-void FifoBroadcast::fb_broadcast(urb_message &msg) {
+void FifoBroadcast::fb_broadcast(b_message &msg) {
     local_sequence_number++;
     urb->urb_broadcast(msg);
 }
 
 
-void FifoBroadcast::fb_deliver(urb_message &msg_to_deliver) {
+void FifoBroadcast::fb_deliver(b_message &msg_to_deliver) {
     unique_lock<mutex> lck(mtx_fb_delivering_queue);
     cv_fb_delivering_queue.wait(lck, [&] { return !fb_delivering_queue_locked; });
     fb_delivering_queue_locked = true;
@@ -39,7 +39,7 @@ void FifoBroadcast::fb_deliver(urb_message &msg_to_deliver) {
 }
 
 
-void FifoBroadcast::add_pending(urb_message &msg) {
+void FifoBroadcast::add_pending(b_message &msg) {
     pair<int, int> new_pending(msg.first_sender, msg.seq_number);
     mtx_pending.lock();
     pending->insert(new_pending);
@@ -82,20 +82,20 @@ void FifoBroadcast::increase_next_to_deliver(int process) {
 }
 
 
-urb_message FifoBroadcast::get_next_urb_delivered() {
+b_message FifoBroadcast::get_next_urb_delivered() {
     return urb->get_next_message();
 }
 
 
 void handle_urb_delivered(FifoBroadcast *fb) {
     while (true) {
-        urb_message msg = fb->get_next_urb_delivered();
+        b_message msg = fb->get_next_urb_delivered();
         fb->add_pending(msg);
         for (pair<int, int> p : *fb->get_pending_copy()) {
             if (p.second == fb->get_next_to_deliver(p.first)) {
                 fb->increase_next_to_deliver(p.first);
                 fb->remove_pending(p.first, p.second);
-                urb_message msg_to_deliver(p.second, p.first);
+                b_message msg_to_deliver(p.second, p.first);
                 fb->fb_deliver(msg_to_deliver);
             }
         }

@@ -15,7 +15,7 @@ void BeBroadcast::init(){
 }
 
 
-void BeBroadcast::beb_broadcast(urb_message &msg) {
+void BeBroadcast::beb_broadcast(b_message &msg) {
     pp2p_message pp2p_msg = pp2p_message(false, this->link->get_process_number(), msg);
     for (int i = 1; i <= number_of_processes; i++) {
         link->send_to(i, pp2p_msg);
@@ -23,7 +23,7 @@ void BeBroadcast::beb_broadcast(urb_message &msg) {
 }
 
 
-void BeBroadcast::beb_deliver(urb_message &msg) {
+void BeBroadcast::beb_deliver(b_message &msg) {
     // Put the message in the queue so that it can be delivered to urb.
     unique_lock<mutex> lck(mtx_beb_urb);
     cv_beb_urb.wait(lck, [&] { return !queue_beb_urb_locked; });
@@ -47,9 +47,7 @@ void run_deliverer_beb(Link* link, BeBroadcast* be_broadcast){
         // the broadcast pp2p_message that the beb delivery gets
         // is with same first_sender and seq number of the pp2p pp2p_message.
 
-        // TODO: fix message constructor!!
-        urb_message urb_msg(msg.payload);
-        be_broadcast->beb_deliver(urb_msg);
+        be_broadcast->beb_deliver(msg.payload);
     }
 }
 

@@ -22,7 +22,7 @@ class UrBroadcast {
 private:
     int number_of_processes;
     int number_of_messages;
-    queue<urb_message> *urb_delivering_queue;
+    queue<b_message> *urb_delivering_queue;
 public:
     BeBroadcast *beb;
     unordered_set<pair<int,int>, pair_hash> delivered; // both delivered and forward are indexed by sender, sequence number.
@@ -35,13 +35,13 @@ public:
 
     UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_of_messages);
     void init();
-    void urb_broadcast(urb_message &msg);
-    void urb_deliver(urb_message &msg);
-    urb_message get_next_message();
-    bool is_delivered(urb_message &msg);
-    int acks_received(urb_message &msg);
+    void urb_broadcast(b_message &msg);
+    void urb_deliver(b_message &msg);
+    b_message get_next_message();
+    bool is_delivered(b_message &msg);
+    int acks_received(b_message &msg);
     int get_number_of_processes();
-    void addDelivered(urb_message &msg);
+    void addDelivered(b_message &msg);
 };
 
 void handle_beb_delivery(UrBroadcast* urb);
