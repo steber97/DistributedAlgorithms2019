@@ -88,14 +88,16 @@ urb_message FifoBroadcast::get_next_urb_delivered() {
 
 
 void handle_urb_delivered(FifoBroadcast *fb) {
-    urb_message msg = fb->get_next_urb_delivered();
-    fb->add_pending(msg);
-    for (pair<int, int> p : *fb->get_pending_copy()) {
-        if(p.second == fb->get_next_to_deliver(p.second)) {
-            fb->increase_next_to_deliver(p.first);
-            fb->remove_pending(0, 0);
-            urb_message msg_to_deliver(p.second, p.first);
-            fb->fb_deliver(msg_to_deliver);
+    while (true) {
+        urb_message msg = fb->get_next_urb_delivered();
+        fb->add_pending(msg);
+        for (pair<int, int> p : *fb->get_pending_copy()) {
+            if (p.second == fb->get_next_to_deliver(p.second)) {
+                fb->increase_next_to_deliver(p.first);
+                fb->remove_pending(0, 0);
+                urb_message msg_to_deliver(p.second, p.first);
+                fb->fb_deliver(msg_to_deliver);
+            }
         }
     }
 }
