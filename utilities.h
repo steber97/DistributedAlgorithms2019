@@ -17,8 +17,9 @@ using namespace std;
 extern mutex mtx_log;
 extern vector<string> log_actions;
 
-extern mutex mtx_pp2p, mtx_beb, mtx_urb, mtx_fifo;
-extern bool stop_pp2p;
+extern mutex mtx_pp2p_receiver, mtx_pp2p_sender, mtx_beb, mtx_urb, mtx_fifo;
+extern bool stop_pp2p_receiver;
+extern bool stop_pp2p_sender;
 extern bool stop_beb;
 extern bool stop_urb;
 extern bool stop_fifo;

@@ -10,8 +10,9 @@ queue<b_message> queue_beb_urb;
 bool queue_beb_urb_locked = false;
 condition_variable cv_beb_urb;
 
-mutex mtx_pp2p, mtx_beb, mtx_urb, mtx_fifo;
-bool stop_pp2p = false;
+mutex mtx_pp2p_sender, mtx_pp2p_receiver, mtx_beb, mtx_urb, mtx_fifo;
+bool stop_pp2p_receiver = false;
+bool stop_pp2p_sender = false;
 bool stop_beb = false;
 bool stop_urb = false;
 bool stop_fifo = false;

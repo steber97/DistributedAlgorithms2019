@@ -98,6 +98,7 @@ void Link::pp2p_deliver(pp2p_message msg){
  * @return the next new message.
  */
 pp2p_message Link::get_next_message(){
+    // TODO: Check this while loop
     while(true){
         unique_lock<mutex> lck(mtx_receiver);
         cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
@@ -127,7 +128,7 @@ pp2p_message Link::get_next_message(){
 
 void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int sockfd) {
     struct sockaddr_in d_addr;
-    while (true) {
+    while (!check_concurrency_stop(mtx_pp2p_sender, stop_pp2p_sender)) {
         mtx_sender.lock();
         if (!outgoing_messages.empty()) {
             pair<int, pp2p_message> dest_and_msg = outgoing_messages.front();
@@ -177,7 +178,7 @@ bool check_concurrency_variable(mutex& mtx, bool& variable){
 }
 
 void run_receiver(Link *link) {
-    while (!check_concurrency_stop(mtx_pp2p, stop_pp2p)) {
+    while (!check_concurrency_stop(mtx_pp2p_receiver, stop_pp2p_receiver)) {
         unsigned int len;
         char buf[1024];
         struct sockaddr_in sender_addr;

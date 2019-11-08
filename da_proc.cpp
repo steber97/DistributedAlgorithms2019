@@ -42,9 +42,13 @@ static void stop(int signum) {
     }
     mtx_log.unlock();
 
-    mtx_pp2p.lock();
-    stop_pp2p = true;
-    mtx_pp2p.unlock();
+    mtx_pp2p_receiver.lock();
+    stop_pp2p_receiver = true;
+    mtx_pp2p_receiver.unlock();
+
+    mtx_pp2p_sender.lock();
+    stop_pp2p_sender = true;
+    mtx_pp2p_sender.unlock();
 
     mtx_beb.lock();
     stop_beb = true;
@@ -57,6 +61,9 @@ static void stop(int signum) {
     mtx_fifo.lock();
     stop_fifo = true;
     mtx_fifo.unlock();
+
+    // Give time to every detached thread
+    sleep(5);
 
 	//exit directly from signal handler
 	exit(0);
