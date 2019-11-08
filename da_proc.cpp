@@ -45,7 +45,7 @@ static void stop(int signum) {
     sleep(5);
 
 	//exit directly from signal handler
-	exit(0);
+	terminate();
 }
 
 
