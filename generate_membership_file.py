@@ -26,5 +26,3 @@ if __name__=='__main__':
         f.write('127.0.0.1')
         f.write(" ")
         f.write("12" + pad_with_zero(i) + "\n")
-
-    f.write(str(number_of_messages) + "\n")

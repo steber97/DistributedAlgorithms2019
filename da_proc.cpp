@@ -52,7 +52,7 @@ static void stop(int signum) {
 
 int main(int argc, char** argv) {
 
-    if (argc != 3){
+    if (argc != 4){
         // wrong number of arguments
         cout << "Wrong arguments number!!" << endl;
         exit(EXIT_FAILURE);
@@ -76,14 +76,14 @@ int main(int argc, char** argv) {
 
 	// input data contains both the number of messages to send per each process,
 	// and the mapping among processes and ip/port
-	pair<int, unordered_map<int, pair<string, int>>*> input_data = parse_input_data(membership_file);
-    int number_of_processes = input_data.second->size();
-    int number_of_messages = input_data.first;
+	unordered_map<int, pair<string, int>>* input_data = parse_input_data(membership_file);
+    int number_of_processes = input_data->size();
+    int number_of_messages = stoi(argv[3]);
 
     struct sockaddr_in sock;
     int sockfd;
-    string ip_address = (*input_data.second)[process_number].first;
-    int port = (*input_data.second)[process_number].second;
+    string ip_address = (*input_data)[process_number].first;
+    int port = (*input_data)[process_number].second;
     // Creating socket file descriptor
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         cerr << "socket creation failed but maybe recovery";
@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    Link* link = new Link(sockfd, process_number, input_data.second);
+    Link* link = new Link(sockfd, process_number, input_data);
     BeBroadcast* beb = new BeBroadcast(link, number_of_processes, number_of_messages);
     UrBroadcast* urb = new UrBroadcast(beb, number_of_processes, number_of_messages);
     FifoBroadcast* fb = new FifoBroadcast(urb, number_of_processes);

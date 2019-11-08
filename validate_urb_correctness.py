@@ -80,13 +80,13 @@ def check_urb4(wrong_messages, broadcast, delivered, number_of_processes, number
 
 
 if __name__=="__main__":
-    wrong_processes = [ int(x) for x in sys.argv[1:] ]
+    wrong_processes = [ int(x) for x in sys.argv[2:] ]
     print("wrong processes " + str(wrong_processes))
     f = open('membership_py', 'r')
 
     file = f.read()
     number_of_processes = int(file.split('\n')[0])
-    number_of_messages = int(file.split('\n')[-2])
+    number_of_messages = int(sys.argv[1])
     f.close()
 
     broadcast = []

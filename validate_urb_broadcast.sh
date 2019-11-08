@@ -1,19 +1,19 @@
 #!/bin/bash
 
 init_time=2
-time_to_finish=10
+time_to_finish=2
 
 
-processes_to_kill="2 4 9 5 11 3"
-number_of_processes=15
-number_of_messages=10
+processes_to_kill="2"
+number_of_processes=5
+number_of_messages=80
 
 python3 generate_membership_file.py $number_of_processes $number_of_messages
 
 # start 5 processes, each broadcasting 100 messages
 for i in `seq 1 $number_of_processes`
 do
-    ./da_proc $i membership_py &
+    ./da_proc $i membership_py $number_of_messages &
     da_proc_id[$i]=$!
 done
 
@@ -49,7 +49,7 @@ do
     fi
 done
 
-python3 validate_urb_correctness.py $processes_to_kill
+python3 validate_urb_correctness.py $number_of_messages $processes_to_kill
 
 echo finish
 

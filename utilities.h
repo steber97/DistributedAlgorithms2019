@@ -106,7 +106,7 @@ struct pp2p_message  {
  */
 pp2p_message parse_message(string msg);
 
-pair<int, unordered_map<int, pair<string, int>>*> parse_input_data(string &membership_file);
+unordered_map<int, pair<string, int>>*parse_input_data(string &membership_file);
 
 string to_string(pp2p_message msg);
 

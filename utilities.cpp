@@ -17,7 +17,7 @@ condition_variable cv_beb_urb;
  *          - the total number of message to be sent by each process
  *          - a map that contains info on ip and port for each process
  */
-pair<int, unordered_map<int, pair<string, int>> *> parse_input_data(string &membership_file) {
+unordered_map<int, pair<string, int>> * parse_input_data(string &membership_file) {
     unordered_map<int, pair<string, int>> *socket_by_process_id = new(unordered_map<int, pair<string, int>>);
     ifstream mem_in(membership_file);
     int number_of_processes;
@@ -32,8 +32,7 @@ pair<int, unordered_map<int, pair<string, int>> *> parse_input_data(string &memb
         (*socket_by_process_id)[pr_n] = {ip, port};
     }
     int number_of_messages;
-    mem_in >> number_of_messages;
-    return {number_of_messages, socket_by_process_id};
+    return socket_by_process_id;
 }
 
 
