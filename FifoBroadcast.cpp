@@ -92,9 +92,9 @@ void handle_urb_delivered(FifoBroadcast *fb) {
         urb_message msg = fb->get_next_urb_delivered();
         fb->add_pending(msg);
         for (pair<int, int> p : *fb->get_pending_copy()) {
-            if (p.second == fb->get_next_to_deliver(p.second)) {
+            if (p.second == fb->get_next_to_deliver(p.first)) {
                 fb->increase_next_to_deliver(p.first);
-                fb->remove_pending(0, 0);
+                fb->remove_pending(p.first, p.second);
                 urb_message msg_to_deliver(p.second, p.first);
                 fb->fb_deliver(msg_to_deliver);
             }
