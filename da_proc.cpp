@@ -32,7 +32,7 @@ static void stop(int signum) {
 	//write/flush output file if necessary
 	printf("Writing output.\n");
 
-    ofstream out("output/da_proc_" + to_string(process_number) + ".out");
+    ofstream out("da_proc_" + to_string(process_number) + ".out");
 
     // Write log actions to output!
     mtx_log.lock();
