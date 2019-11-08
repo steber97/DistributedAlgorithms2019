@@ -63,7 +63,7 @@ void RcoBroadcast::increase_clock(int process) {
 
 rcob_message RcoBroadcast::front_pending() {
     unique_lock<mutex> lck(mtx_pending);
-    cv_pending.wait(lck, [&]{ return !pending->empty(); });
+    cv_pending.wait(lck, [&] { return !pending->empty(); });
     pending_locked = true;
     rcob_message front_msg = pending->front();
     pending_locked = false;
@@ -74,7 +74,7 @@ rcob_message RcoBroadcast::front_pending() {
 
 void RcoBroadcast::pop_pending() {
     unique_lock<mutex> lck(mtx_pending);
-    cv_pending.wait(lck, [&]{ return !pending->empty(); });
+    cv_pending.wait(lck, [&] { return !pending->empty(); });
     pending_locked = true;
     pending->pop();
     pending_locked = false;
@@ -84,7 +84,7 @@ void RcoBroadcast::pop_pending() {
 
 void RcoBroadcast::push_pending(rcob_message &msg) {
     unique_lock<mutex> lck(mtx_pending);
-    cv_pending.wait(lck, [&]{ return !pending_locked; });
+    cv_pending.wait(lck, [&] { return !pending_locked; });
     pending_locked = true;
     pending->push(msg);
     pending_locked = false;
@@ -122,7 +122,7 @@ void deliver_pending(RcoBroadcast *rcob) {
 
 void handle_urb_delivered(RcoBroadcast *rcob) {
     urb_message urb_delivered_message = rcob->get_next_urb_delivered();
-    if(urb_delivered_message.first_sender != rcob->get_process_number()) {
+    if (urb_delivered_message.first_sender != rcob->get_process_number()) {
         rcob_message rcob_msg(urb_delivered_message.payload);
         rcob->push_pending(rcob_msg);
     }

@@ -3,38 +3,47 @@
 
 #include <unordered_set>
 #include <condition_variable>
+#include <unordered_map>
+
 #include "BeBroadcast.h"
-#include "utilities.h"
 
 using namespace std;
 
+// code freely adapted by https://stackoverflow.com/questions/15160889/how-can-i-make-an-unordered-set-of-pairs-of-integers-in-c
+struct pair_hash {
+    // only define the hash, as the equal operator is already defined in c++! :)
+    inline size_t operator()(const pair<int,int> & v) const {
+        return (v.first<<10) + v.second;
+    }
+};
+
+
 class UrBroadcast {
 private:
-    BeBroadcast *beb;
     int number_of_processes;
     int number_of_messages;
-    unordered_set<int> *delivered;
-    unordered_set<int> *forward;
-    vector<unordered_set<int >> *acks; //a vector (accessible by seq_number of messages) that contains,
-                                       // for each pp2p_message m, a set of the process_numbers of the processes
-                                       // from who the current process received m back
-    condition_variable cv_forward, cv_delivered, cv_acks;
-    mutex mtx_forward, mtx_delivered, mtx_acks;
-    bool forward_locked, delivered_locked, acks_locked;
     queue<urb_message> *urb_delivering_queue;
 public:
+    BeBroadcast *beb;
+    unordered_set<pair<int,int>, pair_hash> delivered; // both delivered and forward are indexed by sender, sequence number.
+    unordered_set<pair<int,int>, pair_hash> forward;
+    unordered_map<pair<int,int>, int, pair_hash> acks; // an unordered map which maps, per each message (sender, seq_number)
+    // the number of replicates for this response.
+    // When the number exceeds half the processes + 1, then the message can be
+    // delivered by urb.
+    mutex mtx_forward, mtx_delivered, mtx_acks;
+
     UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_of_messages);
     void init();
     void urb_broadcast(urb_message &msg);
     void urb_deliver(urb_message &msg);
     urb_message get_next_message();
-    unordered_set<int> * forwarded_messages();
     bool is_delivered(urb_message &msg);
     int acks_received(urb_message &msg);
     int get_number_of_processes();
     void addDelivered(urb_message &msg);
 };
 
-void handle_delivery(UrBroadcast* urb);
+void handle_beb_delivery(UrBroadcast* urb);
 
 #endif //DISTRIBUTED_ALGORITHMS_URBROADCAST_H

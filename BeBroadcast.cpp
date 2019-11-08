@@ -16,7 +16,6 @@ void BeBroadcast::init(){
 
 
 void BeBroadcast::beb_broadcast(urb_message &msg) {
-    broadcast_log(msg);
     pp2p_message pp2p_msg = pp2p_message(false, this->link->get_process_number(), msg);
     for (int i = 1; i <= number_of_processes; i++) {
         link->send_to(i, pp2p_msg);
@@ -25,7 +24,13 @@ void BeBroadcast::beb_broadcast(urb_message &msg) {
 
 
 void BeBroadcast::beb_deliver(urb_message &msg) {
-    delivery_log(msg);
+    // Put the message in the queue so that it can be delivered to urb.
+    unique_lock<mutex> lck(mtx_beb_urb);
+    cv_beb_urb.wait(lck, [&] { return !queue_beb_urb_locked; });
+    queue_beb_urb_locked = true;
+    queue_beb_urb.push(msg);
+    queue_beb_urb_locked = false;
+    cv_beb_urb.notify_one();
 }
 
 
