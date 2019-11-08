@@ -38,7 +38,7 @@ void UrBroadcast::urb_deliver(b_message &msg) {
 }
 
 
-b_message UrBroadcast::get_next_message() {
+b_message UrBroadcast::get_next_urb_delivered() {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
     cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue->empty(); });
     urb_delivering_queue_locked = true;

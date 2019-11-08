@@ -8,6 +8,7 @@
 #include "utilities.h"
 #include "UrBroadcast.h"
 #include "BeBroadcast.h"
+#include "FifoBroadcast.h"
 
 using namespace std;
 
@@ -96,8 +97,9 @@ int main(int argc, char** argv) {
     }
 
     Link* link = new Link(sockfd, process_number, input_data.second);
-    BeBroadcast* be_broadcast = new BeBroadcast(link, number_of_processes, number_of_messages);
-    UrBroadcast* ur_broadcast = new UrBroadcast(be_broadcast, number_of_processes, number_of_messages);
+    BeBroadcast* beb = new BeBroadcast(link, number_of_processes, number_of_messages);
+    UrBroadcast* urb = new UrBroadcast(beb, number_of_processes, number_of_messages);
+    FifoBroadcast* fb = new FifoBroadcast(urb, number_of_processes);
 
     //Broadcast* broadcast = new Broadcast(link, number_of_processes, number_of_messages);
 
@@ -116,16 +118,18 @@ int main(int argc, char** argv) {
 	}
 
     link->init();
-	be_broadcast->init();
-	ur_broadcast->init();
+	beb->init();
+	urb->init();
+	fb->init();
 
     //broadcast messages
     printf("Broadcasting messages.\n");
 
     for (int i = 1; i <= number_of_messages; i++) {
         b_message msg (i, link->get_process_number());
-        ur_broadcast->urb_broadcast(msg);
-        //be_broadcast->beb_broadcast(broad_msg);
+        fb->fb_broadcast(msg);
+        //urb->urb_broadcast(msg);
+        //beb->beb_broadcast(broad_msg);
 
     }
 

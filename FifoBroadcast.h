@@ -28,6 +28,7 @@ public:
     int get_next_to_deliver(int process);
     void increase_next_to_deliver(int process);
     b_message get_next_urb_delivered();
+    b_message get_next_fifo_delivered();
 };
 
 void handle_urb_delivered(FifoBroadcast *fb);

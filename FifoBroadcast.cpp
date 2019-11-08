@@ -30,12 +30,15 @@ void FifoBroadcast::fb_broadcast(b_message &msg) {
 
 
 void FifoBroadcast::fb_deliver(b_message &msg_to_deliver) {
+    urb_broadcast_log(msg_to_deliver);
+    /*
     unique_lock<mutex> lck(mtx_fb_delivering_queue);
     cv_fb_delivering_queue.wait(lck, [&] { return !fb_delivering_queue_locked; });
     fb_delivering_queue_locked = true;
     this->fb_delivering_queue->push(msg_to_deliver);
     fb_delivering_queue_locked = false;
     cv_fb_delivering_queue.notify_all();
+     */
 }
 
 
@@ -83,7 +86,19 @@ void FifoBroadcast::increase_next_to_deliver(int process) {
 
 
 b_message FifoBroadcast::get_next_urb_delivered() {
-    return urb->get_next_message();
+    return urb->get_next_urb_delivered();
+}
+
+
+b_message FifoBroadcast::get_next_fifo_delivered() {
+    unique_lock<mutex> lck(mtx_fb_delivering_queue);
+    cv_fb_delivering_queue.wait(lck, [&] { return !fb_delivering_queue->empty(); });
+    fb_delivering_queue_locked = true;
+    b_message next_message = this->fb_delivering_queue->front();
+    this->fb_delivering_queue->pop();
+    fb_delivering_queue_locked = false;
+    cv_fb_delivering_queue.notify_all();
+    return next_message;
 }
 
 

@@ -37,7 +37,7 @@ public:
     void init();
     void urb_broadcast(b_message &msg);
     void urb_deliver(b_message &msg);
-    b_message get_next_message();
+    b_message get_next_urb_delivered();
     bool is_delivered(b_message &msg);
     int acks_received(b_message &msg);
     int get_number_of_processes();
