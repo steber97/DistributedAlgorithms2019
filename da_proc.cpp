@@ -111,6 +111,11 @@ int main(int argc, char** argv) {
     // Resize the delivered messages matrix (at the perfect link layer) It is used to avoid duplicates.
     pl_delivered.resize(number_of_processes+1, unordered_set<long long>());
 
+    link->init();
+    beb->init();
+    urb->init();
+    fb->init();
+
     //wait until start signal
 	while(wait_for_start) {
 		struct timespec sleep_time;
@@ -118,11 +123,6 @@ int main(int argc, char** argv) {
 		sleep_time.tv_nsec = 1000;
 		nanosleep(&sleep_time, NULL);
 	}
-
-    link->init();
-	beb->init();
-	urb->init();
-	fb->init();
 
     //broadcast messages
     printf("Broadcasting messages.\n");
