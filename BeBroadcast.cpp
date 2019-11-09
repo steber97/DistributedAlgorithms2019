@@ -46,8 +46,8 @@ void run_deliverer_beb(Link* link, BeBroadcast* be_broadcast){
         pp2p_message msg = link->get_next_message();
         // the broadcast pp2p_message that the beb delivery gets
         // is with same first_sender and seq number of the pp2p pp2p_message.
-
-        be_broadcast->beb_deliver(msg.payload);
+        if (!is_pp2p_fake(msg))   // only deliver it if it is not fake.
+            be_broadcast->beb_deliver(msg.payload);
     }
 }
 

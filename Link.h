@@ -67,7 +67,6 @@ public:
     void send_to(int d_process_number, pp2p_message& msg);
     void send_ack(pp2p_message msg);
     pp2p_message get_next_message();
-    void pp2p_deliver(pp2p_message msg);
 };
 
 void run_receiver(Link *link);

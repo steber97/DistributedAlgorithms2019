@@ -10,6 +10,10 @@ queue<b_message> queue_beb_urb;
 bool queue_beb_urb_locked = false;
 condition_variable cv_beb_urb;
 
+
+mutex mtx_pp2p_sender, mtx_pp2p_receiver, mtx_pp2p_get_msg;
+bool stop_pp2p_receiver = false, stop_pp2p_sender = false, stop_pp2p_get_msg = false;
+
 /**
  * Parses the input file
  * @param membership_file the file to parse
@@ -34,6 +38,20 @@ unordered_map<int, pair<string, int>> * parse_input_data(string &membership_file
     return socket_by_process_id;
 }
 
+
+/**
+ * A fake message is a message with a sequence number equal to -1
+ * @param msg
+ * @return
+ */
+bool is_pp2p_fake(pp2p_message msg){
+    return msg.seq_number == -1;
+}
+
+pp2p_message create_fake_pp2p(){
+    b_message fake_payload(-1, -1);
+    return pp2p_message(false, -1LL, -1, fake_payload);
+}
 
 /**
  * The message format sent at the perfect link layer is :

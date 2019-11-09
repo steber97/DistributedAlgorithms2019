@@ -17,12 +17,10 @@ using namespace std;
 extern mutex mtx_log;
 extern vector<string> log_actions;
 
-extern mutex mtx_pp2p_receiver, mtx_pp2p_sender, mtx_beb, mtx_urb, mtx_fifo;
+extern mutex mtx_pp2p_receiver, mtx_pp2p_sender, mtx_pp2p_get_msg;
 extern bool stop_pp2p_receiver;
 extern bool stop_pp2p_sender;
-extern bool stop_beb;
-extern bool stop_urb;
-extern bool stop_fifo;
+extern bool stop_pp2p_get_msg;
 
 bool check_concurrency_stop(mutex& mtx, bool& variable);
 
@@ -71,13 +69,6 @@ struct pp2p_message  {
     long long seq_number;   // This sequence number has nothing to do with the sequence number of the broadcast level!
     b_message payload;
 
-    pp2p_message(){
-        this->ack = false;
-        this->seq_number = 0;
-        this->proc_number = 0;
-        this->payload = *(new b_message());
-    }
-
     pp2p_message(bool ack, int proc_number, b_message &payload): payload(payload) {
         // Constructor.
         this->ack = ack;
@@ -94,6 +85,8 @@ struct pp2p_message  {
     }
 };
 
+bool is_pp2p_fake(pp2p_message);
+pp2p_message create_fake_pp2p();
 
 /**
  * @param msg is a string formatted like A-ID-SN where:

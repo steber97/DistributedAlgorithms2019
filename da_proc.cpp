@@ -16,6 +16,8 @@ static int wait_for_start = 1;
 
 int process_number;
 
+int sockfd;
+
 static void start(int signum) {
 	wait_for_start = 0;
 }
@@ -26,7 +28,24 @@ static void stop(int signum) {
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGINT, SIG_DFL);
 
-	//immediately stop network packet processing
+	// Stop delivering and sending message at the pp2p layer!
+    close(sockfd);
+
+    mtx_pp2p_sender.lock();
+    stop_pp2p_sender = true;
+    mtx_pp2p_sender.unlock();
+
+    mtx_pp2p_receiver.lock();
+    stop_pp2p_receiver = true;
+    mtx_pp2p_receiver.unlock();
+
+    mtx_pp2p_get_msg.lock();
+    stop_pp2p_get_msg = true;
+    mtx_pp2p_get_msg.unlock();
+
+    sleep(2);   // wait for sender and receiver to stop, so that after the below writing no message is received or sent.
+
+    //immediately stop network packet processing
 	printf("Immediately stopping network packet processing.\n");
 
 	//write/flush output file if necessary
@@ -40,7 +59,6 @@ static void stop(int signum) {
         out << line << endl;
     }
     mtx_log.unlock();
-    cout << "Finish to write output " << endl;
     // Give time to every detached thread
     sleep(5);
 
@@ -80,7 +98,7 @@ int main(int argc, char** argv) {
     int number_of_messages = stoi(argv[3]);
 
     struct sockaddr_in sock;
-    int sockfd;
+
     string ip_address = (*input_data)[process_number].first;
     int port = (*input_data)[process_number].second;
     // Creating socket file descriptor

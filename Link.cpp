@@ -83,13 +83,8 @@ void Link::send_ack(pp2p_message msg) {
     sendto(sockfd, message_to_send.c_str(), strlen(message_to_send.c_str()),
            MSG_CONFIRM, (const struct sockaddr *) &d_addr,
            sizeof(d_addr));
+
 }
-
-
-void Link::pp2p_deliver(pp2p_message msg){
-    cout << "\npp2p delivery di: [pn=" << msg.proc_number << ", sn=" << msg.seq_number << "] by process " << process_number << endl;
-}
-
 
 /**
  * This is the deliverer for the perfect link level.
@@ -122,7 +117,16 @@ pp2p_message Link::get_next_message(){
                 return msg;
             }
         }
+        mtx_pp2p_get_msg.lock();
+        if (stop_pp2p_get_msg){
+            mtx_pp2p_get_msg.unlock();
+            break;
+        }
+        mtx_pp2p_get_msg.unlock();
     }
+    // This happens only when the process is killed, no harm can be done!
+    pp2p_message fake = create_fake_pp2p();
+    return fake;
 }
 
 
@@ -153,7 +157,7 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
                 sendto(sockfd, msg_c, strlen(msg_c),
                        MSG_CONFIRM, (const struct sockaddr *) &d_addr,
                        sizeof(d_addr));
-                // cout << "Sent " << msg_c << " to " << dest_and_msg.first << endl;
+                //cout << "Sent " << msg_c << " to " << dest_and_msg.first << endl;
                 if (!dest_and_msg.second.ack) {
                     mtx_sender.lock();
                     outgoing_messages.push(dest_and_msg);
@@ -167,6 +171,12 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
         }
         // wait a bit before sending the new message.
         usleep(10);
+        mtx_pp2p_sender.lock();
+        if (stop_pp2p_sender){
+            mtx_pp2p_sender.unlock();
+            break;
+        }
+        mtx_pp2p_sender.unlock();
     }
 }
 
@@ -188,7 +198,7 @@ void run_receiver(Link *link) {
 
         pp2p_message msg = parse_message(string(buf));
 
-        // cout << "\nNew message: ack="<< msg.ack <<" [pn=" << msg.proc_number << ", snd=" << msg.payload.sender << ", seq=" << msg.payload.seq_number <<  "] by process " << link->get_process_number() << endl;
+        //cout << "\nNew message " << msg.proc_number << " " << msg.seq_number << endl;
 
         // Put the message in the queue.
         unique_lock<mutex> lck(mtx_receiver);
@@ -197,6 +207,13 @@ void run_receiver(Link *link) {
         incoming_messages.push(msg);
         queue_locked = false;
         cv_receiver.notify_one();
+
+        // stop in case da_proc received a sigterm!
+        mtx_pp2p_receiver.lock();
+        if (stop_pp2p_receiver){
+            mtx_pp2p_receiver.unlock();
+            break;
+        }
+        mtx_pp2p_receiver.unlock();
     }
-    cout << "detached receiver" << endl;
 }
