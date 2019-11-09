@@ -71,7 +71,7 @@ void Link::send_to(int d_process_number, pp2p_message& msg) {
 /**
  * Method used to send an acks at link level, in other words when a message is received an ack is sent to the broadcaster
  */
-void Link::send_ack(pp2p_message msg) {
+void Link::send_ack(pp2p_message &msg) {
     // Create the ack string (1-source process-sequence number of pp2p_message to ack)
     int source_process = process_number;
     int dest_process = msg.proc_number;
