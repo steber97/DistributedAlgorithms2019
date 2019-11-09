@@ -1,9 +1,5 @@
 #include "FifoBroadcast.h"
 
-condition_variable cv_fb_delivering_queue;
-mutex mtx_fb_delivering_queue;
-bool fb_delivering_queue_locked = false;
-
 mutex mtx_pending;
 
 FifoBroadcast::FifoBroadcast(UrBroadcast *urb, int number_of_processes) {

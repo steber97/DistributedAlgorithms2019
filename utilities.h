@@ -30,8 +30,7 @@ bool check_concurrency_stop(mutex& mtx, bool& variable);
  * The sender is not the actual sender, but the initial sender of that message.
  *
  * So, if process 3 broadcasts a message received by process 2, the sender is still 2,
- * although it is 3 which is broadcasting. At the message level, instead, the
- * sender is going to be 3.
+ * although it is 3 which is broadcasting.
  */
 struct b_message  {
 
@@ -55,12 +54,10 @@ struct b_message  {
 
 
 /**
- * This is the message structure.
- * ########################
- * ## VERY CAREFUL HERE! ##
- * ########################
+ * This is the message structure at link level.
  *
- * proc_number is always the sender of the message, not the receiver!!
+ * proc_number is always the sender of the message, not the receiver! In addition it is the process who actually sent
+ * the message, not the one who initially sent it in broadcast.
  *
  */
 struct pp2p_message  {
@@ -103,14 +100,22 @@ unordered_map<int, pair<string, int>>*parse_input_data(string &membership_file);
 
 string to_string(pp2p_message msg);
 
+/**
+ * These functions handle the logging of the output
+ */
 void urb_broadcast_log(b_message& msg);
 void urb_delivery_log(b_message& msg);
 
 
-extern condition_variable cv_beb_urb;
-extern queue<b_message> queue_beb_urb;
-extern mutex mtx_beb_urb;
-extern bool queue_beb_urb_locked;
+/**
+ * These are used to handle the queue that is in the middle between beb and urb,
+ * it contains the messages delivered by beb and that should be handled by urb
+ */
+extern queue<b_message> queue_beb_urb; // the actual queue
+
+extern condition_variable cv_beb_urb;  //
+extern mutex mtx_beb_urb;              // to handle concurrency on the queue
+extern bool queue_beb_urb_locked;      //
 
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 

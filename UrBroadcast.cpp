@@ -1,8 +1,8 @@
 #include "UrBroadcast.h"
 
-condition_variable cv_urb_delivering_queue;
-mutex mtx_urb_delivering_queue;
-bool urb_delivering_queue_locked = false;
+condition_variable cv_urb_delivering_queue; //
+mutex mtx_urb_delivering_queue;             // To handle concurrency on the queue of the messages delivered at urb level
+bool urb_delivering_queue_locked = false;   //
 
 
 UrBroadcast::UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_of_messages) {
@@ -13,12 +13,19 @@ UrBroadcast::UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_o
 }
 
 
+/**
+ * This method initializes a thread that handle messages delivered at beb level
+ */
 void UrBroadcast::init() {
     thread delivery_checker(handle_beb_delivery, this);
     delivery_checker.detach();
 }
 
-
+/**
+ * The actual method that broadcasts messages at urb level
+ *
+ * @param msg
+ */
 void UrBroadcast::urb_broadcast(b_message &msg)  {
     //urb_broadcast_log(msg);
     this->mtx_forward.lock();
@@ -29,6 +36,11 @@ void UrBroadcast::urb_broadcast(b_message &msg)  {
 }
 
 
+/**
+ * Method used to when a message has to be delivered at urb level,
+ * this is pushed into a queue that contains all the delivered messages at urb level
+ * @param msg
+ */
 void UrBroadcast::urb_deliver(b_message &msg) {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
     cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue_locked; });
@@ -41,6 +53,12 @@ void UrBroadcast::urb_deliver(b_message &msg) {
 }
 
 
+/**
+ * Gets the next message delivered by urb, by popping it from the queue
+ * It's used by the fifo level to get the messages delivered at the inferior level
+ *
+ * @return the head of urb_delivering_queue
+ */
 b_message UrBroadcast::get_next_urb_delivered() {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
     cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue->empty(); });
@@ -53,6 +71,12 @@ b_message UrBroadcast::get_next_urb_delivered() {
 }
 
 
+/**
+ * Checks whether a message has been delivered or not
+ *
+ * @return true if delivered
+ *         false otherwise
+ */
 bool UrBroadcast::is_delivered(b_message &msg) {
     this->mtx_delivered.lock();
     bool is_delivered = (this->delivered.find({msg.first_sender, msg.seq_number}) != delivered.end());
@@ -61,6 +85,12 @@ bool UrBroadcast::is_delivered(b_message &msg) {
 }
 
 
+/**
+ * Checks how many acks (at urb level) have been received for a specific message
+ *
+ * @param msg the message for which we want to check the number of received acks
+ * @return the number of received acks
+ */
 int UrBroadcast::acks_received(b_message &msg) {
     this->mtx_acks.lock();
     int n_acks = this->acks[{msg.first_sender, msg.seq_number}];
@@ -69,6 +99,11 @@ int UrBroadcast::acks_received(b_message &msg) {
 }
 
 
+/**
+ * Adds a message to the set of the delivered messages
+ *
+ * @param msg message to add to the set
+ */
 void UrBroadcast::addDelivered(b_message &msg) {
     this->mtx_delivered.lock();
     this->delivered.insert({msg.first_sender, msg.seq_number});
@@ -81,11 +116,13 @@ int UrBroadcast::get_number_of_processes() {
 }
 
 
+/**
+ * This method gets messages from the shared queue between BEB and URB and handle them
+ * It is the way URB can interact with BEB.
+ *
+ * @param urb
+ */
 void handle_beb_delivery(UrBroadcast *urb) {
-    /**
-     * This method gets messages from the shared queue among BEB and URB
-     * It is the way URB can interact with BEB.
-     */
     while (true) {
         // First retrieves the message from the queue.
         unique_lock<mutex> lck(mtx_beb_urb);

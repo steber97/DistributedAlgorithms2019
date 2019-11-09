@@ -27,18 +27,19 @@
 
 using namespace std;
 
-
+/// These variables are useful to handle concurrency on data structure accessed by the threads sender and receiver
 extern mutex mtx_receiver, mtx_sender, mtx_acks;
 extern condition_variable cv_receiver;
 extern queue<pp2p_message> incoming_messages;
 
+/// Queue of messages that have to be sent
 extern queue<pair<int,pp2p_message>> outgoing_messages;
 
 /// Both acks and pl_delivered are indexed in this way:
 // the vector is indexed by the process number in the perfect link message
 // the pair is made of the sender and the sequence number in the broadcast message.
 
-extern vector<unordered_set<long long int>> acks;  // acks
+extern vector<unordered_set<long long int>> acks;  // acks at pp2p level
 
 extern vector<unordered_set<long long int>> pl_delivered;  // Delivered by perfect link.
 
@@ -53,6 +54,10 @@ extern vector<unordered_set<long long int>> pl_delivered;  // Delivered by perfe
  */
 void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int sockfd);
 
+
+/**
+ * Class representing a perfect link
+ */
 class Link {
 private:
     int sockfd;

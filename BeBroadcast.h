@@ -6,7 +6,9 @@
 #ifndef DISTRIBUTED_ALGORITHMS_BEBROADCAST_H
 #define DISTRIBUTED_ALGORITHMS_BEBROADCAST_H
 
-
+/**
+ * This class represent the best-effort broadcast abstraction
+ */
 class BeBroadcast {
 private:
     Link* link;

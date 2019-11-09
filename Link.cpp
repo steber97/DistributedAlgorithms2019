@@ -4,16 +4,18 @@
 bool queue_locked = false;
 mutex mtx_receiver, mtx_sender, mtx_acks;
 condition_variable cv_receiver;
-queue<pp2p_message> incoming_messages;
 
+//These two data structure contain the incoming and the outgoing messages
+queue<pp2p_message> incoming_messages;
 queue<pair<int,pp2p_message>> outgoing_messages;
 
 vector<unordered_set<long long int>> acks;  // acks
-
-vector<unordered_set<long long int>> pl_delivered;
+vector<unordered_set<long long int>> pl_delivered;  //sequence numbers of the delivered messages at perfect link level
+                                                    //ordered by the process that sent them
 
 
 Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id) {
+    // Constructor
     this->sockfd = sockfd;
     this->process_number = process_number;
     this->socket_by_process_id = socket_by_process_id;
@@ -21,6 +23,9 @@ Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>>
 }
 
 
+/**
+ * This method spawns the threads that will be used to send and receive messages on a port
+ */
 void Link::init() {
     thread t_rec(run_receiver, this);
     thread t_send(run_sender, this->socket_by_process_id, this->sockfd);
@@ -43,8 +48,7 @@ int Link::get_process_number() {
  * Format of messages:
  * - 1 bit for ack: 0 normal message, 1 ack.
  *
- * CAREFUL HERE: the message is not ready to run,
- *              first it must be added the sequence number.
+ * CAREFUL HERE: the message is not ready to run, first the sequence number must be added.
  *
  * This method only puts the message in the queue of outgoing messages, so that the sender can send it.
  * @param d_process_number destination address.
@@ -64,6 +68,9 @@ void Link::send_to(int d_process_number, pp2p_message& msg) {
 }
 
 
+/**
+ * Method used to send an acks at link level, in other words when a message is received an ack is sent to the broadcaster
+ */
 void Link::send_ack(pp2p_message msg) {
     // Create the ack string (1-source process-sequence number of pp2p_message to ack)
     int source_process = process_number;
@@ -87,7 +94,7 @@ void Link::send_ack(pp2p_message msg) {
 }
 
 /**
- * This is the deliverer for the perfect link level.
+ * This methods get the incoming messages and then handles both the sending of the ack and the delivery at perfect link level.
  *
  * It avoids duplicate messages.
  * @return the next new message.
@@ -130,6 +137,12 @@ pp2p_message Link::get_next_message(){
 }
 
 
+/**
+ * Method run by the thread sender, it dequeues outgoing messages and then sends
+ *
+ * @param socket_by_process_id  data structure that maps every process (number) to its (ip, port) pair
+ * @param sockfd the socket fd of the link's owner process
+ */
 void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int sockfd) {
     struct sockaddr_in d_addr;
     while (true) {
@@ -187,6 +200,13 @@ bool check_concurrency_variable(mutex& mtx, bool& variable){
     return res;
 }
 
+
+/**
+ * This is the method run by the thread receiver, it listens on a certain port until it gets a message and then it
+ * puts the message the incoming_messages queue
+ *
+ * @param link
+ */
 void run_receiver(Link *link) {
     while (true) {
         unsigned int len;

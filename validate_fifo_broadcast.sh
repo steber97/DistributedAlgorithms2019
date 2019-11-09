@@ -12,7 +12,7 @@ python3 generate_membership_file.py $number_of_processes $number_of_messages
 # start 5 processes, each broadcasting 100 messages
 for i in `seq 1 $number_of_processes`
 do
-    ./da_proc $i membership_py $number_of_messages&
+    ./da_proc $i membership_py $number_of_messages &
     da_proc_id[$i]=$!
 done
 
