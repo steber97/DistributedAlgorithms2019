@@ -102,7 +102,9 @@ pp2p_message Link::get_next_message(){
         incoming_messages.pop();
         queue_locked = false;
         cv_receiver.notify_one();
-        //cout << "get next message" << endl;
+#ifdef DEBUG
+        cout << "get next message" << endl;
+#endif
         if (msg.ack) {
             // we received an ack;
             // cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
@@ -137,7 +139,6 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
         if (!outgoing_messages.empty()) {
             pair<int, pp2p_message> dest_and_msg = outgoing_messages.front();
             outgoing_messages.pop();
-            // cout << "size of queue " << outgoing_messages.size() << endl;
             mtx_sender.unlock();
 
             mtx_acks.lock();
@@ -157,7 +158,9 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
                 sendto(sockfd, msg_c, strlen(msg_c),
                        MSG_CONFIRM, (const struct sockaddr *) &d_addr,
                        sizeof(d_addr));
-                //cout << "Sent " << msg_c << " to " << dest_and_msg.first << endl;
+#ifdef DEBUG
+                cout << "Sent " << msg_c << " to " << dest_and_msg.first << endl;
+#endif
                 if (!dest_and_msg.second.ack) {
                     mtx_sender.lock();
                     outgoing_messages.push(dest_and_msg);
@@ -197,9 +200,9 @@ void run_receiver(Link *link) {
         buf[n] = '\0';
 
         pp2p_message msg = parse_message(string(buf));
-
-        //cout << "\nNew message " << msg.proc_number << " " << msg.seq_number << endl;
-
+#ifdef DEBUG
+        cout << "\nNew message " << msg.proc_number << " " << msg.seq_number << endl;
+#endif
         // Put the message in the queue.
         unique_lock<mutex> lck(mtx_receiver);
         cv_receiver.wait(lck, [&] { return !queue_locked; });

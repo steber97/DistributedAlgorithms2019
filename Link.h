@@ -23,6 +23,8 @@
 
 #include "utilities.h"
 
+// #define DEBUG
+
 #define MAXLINE 1024
 
 using namespace std;
