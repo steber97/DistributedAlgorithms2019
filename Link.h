@@ -72,7 +72,7 @@ public:
     int get_sockfd();
     int get_process_number();
     void send_to(int d_process_number, pp2p_message& msg);
-    void send_ack(pp2p_message msg);
+    void send_ack(pp2p_message &msg);
     pp2p_message get_next_message();
 };
 

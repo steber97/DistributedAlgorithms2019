@@ -17,9 +17,8 @@ def pad_with_zero(i):
 
 if __name__=='__main__':
     number_of_processes = int(sys.argv[1])
-    number_of_messages = int(sys.argv[2])
 
-    f = open('membership_py', 'w')
+    f = open('membership', 'w')
     f.write(str(number_of_processes) + "\n")
     for i in range(1, number_of_processes+1):
         f.write(str(i) + " ")

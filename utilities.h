@@ -94,11 +94,11 @@ pp2p_message create_fake_pp2p();
  *        An example of message is 1-10-42 which means ack for message 42, sent by process 10
  * @return a struct of type message
  */
-pp2p_message parse_message(string msg);
+pp2p_message parse_message(const string &msg);
 
 unordered_map<int, pair<string, int>>*parse_input_data(string &membership_file);
 
-string to_string(pp2p_message msg);
+string to_string(pp2p_message &msg);
 
 /**
  * These functions handle the logging of the output

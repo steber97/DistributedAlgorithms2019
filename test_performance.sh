@@ -8,18 +8,14 @@
 #                  should run.
 #
 
+number_of_processes=10
 evaluation_time=50
 init_time=2
 
-echo "5
-1 127.0.0.1 11001
-2 127.0.0.1 11002
-3 127.0.0.1 11003
-4 127.0.0.1 11004
-5 127.0.0.1 11005" > membership
+python3 generate_membership_file.py $number_of_processes
 
 #start 5 processes
-for i in `seq 1 5`
+for i in `seq 1 $number_of_processes`
 do
     ./da_proc $i membership 10000 &
     da_proc_id[$i]=$!
@@ -30,7 +26,7 @@ sleep $init_time
 
 #start broadcasting
 echo "Evaluating application for ${evaluation_time} seconds."
-for i in `seq 1 5`
+for i in `seq 1 $number_of_processes`
 do
     if [ -n "${da_proc_id[$i]}" ]; then
 	kill -USR2 "${da_proc_id[$i]}"
@@ -41,7 +37,7 @@ done
 sleep $evaluation_time
 
 #stop all processes
-for i in `seq 1 5`
+for i in `seq 1 $number_of_processes`
 do
     if [ -n "${da_proc_id[$i]}" ]; then
 	kill -TERM "${da_proc_id[$i]}"
@@ -49,13 +45,13 @@ do
 done
 
 #wait until all processes stop
-for i in `seq 1 5`
+for i in `seq 1 $number_of_processes`
 do
 	wait "${da_proc_id[$i]}"
 done
 
 #count delivered messages in the logs
-for i in `seq 1 5`
+for i in `seq 1 $number_of_processes`
 do
 	python3 count_delivered.py $i
 done

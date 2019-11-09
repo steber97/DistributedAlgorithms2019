@@ -120,8 +120,6 @@ int main(int argc, char** argv) {
     UrBroadcast* urb = new UrBroadcast(beb, number_of_processes, number_of_messages);
     FifoBroadcast* fb = new FifoBroadcast(urb, number_of_processes);
 
-    //Broadcast* broadcast = new Broadcast(link, number_of_processes, number_of_messages);
-
     // Resize the number of acks (at the perfect link layer)
     acks.resize(number_of_processes+1, unordered_set<long long>());
 
@@ -149,23 +147,9 @@ int main(int argc, char** argv) {
         //beb->beb_broadcast(msg);
         //urb->urb_broadcast(msg);
         fb->fb_broadcast(msg);
+        usleep(10000);
     }
-//
-//    // Try to send a lot of messages at the time.
-//    for (int i = 1; i<=number_of_processes; i++){
-//        b_message msg (i, link->get_process_number());
-//        if (i != process_number){
-//            for (int j = 1; j<=number_of_messages; j++) {
-//                pp2p_message m(false, j, link->get_process_number(), msg);
-//                link->send_to(i, m);
-//            }
-//        }
-//    }
-//
-//    while(true){
-//        pp2p_message m = link->get_next_message();
-//    }
-//
+
     while(1) {
 		struct timespec sleep_time;
 		sleep_time.tv_sec = 1;

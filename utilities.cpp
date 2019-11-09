@@ -62,23 +62,22 @@ pp2p_message create_fake_pp2p(){
  * for instance, the message
  * 0-3-1/5-3  means a normal message (ack = 1) sent by process 3 with sequence number pp2p 1,
  * which brings the message 3 originally sent by 5.
- * @param str
+ * @param msg
  * @return
  */
-pp2p_message parse_message(string str) {
+pp2p_message parse_message(const string &msg) {
     size_t current, previous = 0;
     vector<string> cont_outer;
     char delim_outer = '/';
-    current = str.find(delim_outer);
+    current = msg.find(delim_outer);
     while (current != string::npos) {
-        cont_outer.push_back(str.substr(previous, current - previous));
+        cont_outer.push_back(msg.substr(previous, current - previous));
         previous = current + 1;
-        current = str.find(delim_outer, previous);
+        current = msg.find(delim_outer, previous);
     }
-    cont_outer.push_back(str.substr(previous, current - previous));
+    cont_outer.push_back(msg.substr(previous, current - previous));
 
     // We need to have a message with size 2 (is like making the split by '/' in python).
-    assert(cont_outer.size() == 2);
 
     // Parse the perfect link message
     previous = 0;
@@ -111,26 +110,6 @@ pp2p_message parse_message(string str) {
     int sender = stoi(cont2[0]);
     int seq_number_broad = stoi(cont2[1]);
 
-    /* parse the fifo_broadcast
-    previous = 0;
-    vector<string> cont3;
-    delim = '-';
-    current = cont_outer[2].find(delim);
-    while (current != string::npos) {
-        cont3.push_back(cont_outer[2].substr(previous, current - previous));
-        previous = current + 1;
-        current = cont_outer[2].find(delim, previous);
-    }
-    cont3.push_back(cont_outer[2].substr(previous, current - previous));
-
-    vector<int> clocks(cont3.size() - 1);
-    for (size_t i = 0; i < cont3.size() - 1; i++) {
-        clocks[i] = stoi(cont3[i]);
-    }
-
-    fb_message rcob_msg(clocks, cont3[cont3.size() - 1]);
-     */
-
     b_message urb_msg(seq_number_broad, sender);
     pp2p_message pp2p_msg(ack, seq_number_pp2p, proc_number, urb_msg);
 
@@ -148,7 +127,7 @@ pp2p_message parse_message(string str) {
  * @param msg
  * @return
  */
-string to_string(pp2p_message msg){
+string to_string(pp2p_message &msg){
     return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number)
                 + "/" + to_string(msg.payload.first_sender) + "-" + to_string(msg.payload.seq_number);
 }
