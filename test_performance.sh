@@ -21,7 +21,7 @@ echo "5
 #start 5 processes
 for i in `seq 1 5`
 do
-    ./da_proc $i membership 100 &
+    ./da_proc $i membership 10000 &
     da_proc_id[$i]=$!
 done
 
@@ -55,6 +55,10 @@ do
 done
 
 #count delivered messages in the logs
-#... (not implemented here)
+for i in `seq 1 5`
+do
+	python3 count_delivered.py $i
+done
+
 
 echo "Performance test done."

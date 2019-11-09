@@ -102,7 +102,7 @@ pp2p_message Link::get_next_message(){
         incoming_messages.pop();
         queue_locked = false;
         cv_receiver.notify_one();
-
+        //cout << "get next message" << endl;
         if (msg.ack) {
             // we received an ack;
             // cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
