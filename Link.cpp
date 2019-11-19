@@ -217,6 +217,15 @@ void run_receiver(Link *link) {
         struct sockaddr_in sender_addr;
         int n = recvfrom(link->get_sockfd(), (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
                          &len);
+
+        // stop in case da_proc received a sigterm!
+        mtx_pp2p_receiver.lock();
+        if (stop_pp2p_receiver){
+            mtx_pp2p_receiver.unlock();
+            break;
+        }
+        mtx_pp2p_receiver.unlock();
+
         buf[n] = '\0';
 
         pp2p_message msg = parse_message(string(buf));
@@ -232,11 +241,5 @@ void run_receiver(Link *link) {
         cv_receiver.notify_one();
 
         // stop in case da_proc received a sigterm!
-        mtx_pp2p_receiver.lock();
-        if (stop_pp2p_receiver){
-            mtx_pp2p_receiver.unlock();
-            break;
-        }
-        mtx_pp2p_receiver.unlock();
     }
 }
