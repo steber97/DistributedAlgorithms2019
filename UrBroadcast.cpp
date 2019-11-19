@@ -1,15 +1,11 @@
 #include "UrBroadcast.h"
 
-condition_variable cv_urb_delivering_queue; //
-mutex mtx_urb_delivering_queue;             // To handle concurrency on the queue of the messages delivered at urb level
-bool urb_delivering_queue_locked = false;   //
-
+ReaderWriterQueue<b_message> urb_delivering_queue(100);
 
 UrBroadcast::UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_of_messages) {
     this->beb = beb;
     this->number_of_processes = number_of_processes;
     this->number_of_messages = number_of_messages;
-    this->urb_delivering_queue = new queue<b_message>;
 }
 
 
@@ -20,6 +16,7 @@ void UrBroadcast::init() {
     thread delivery_checker(handle_beb_delivery, this);
     delivery_checker.detach();
 }
+
 
 /**
  * The actual method that broadcasts messages at urb level
@@ -42,14 +39,7 @@ void UrBroadcast::urb_broadcast(b_message &msg)  {
  * @param msg
  */
 void UrBroadcast::urb_deliver(b_message &msg) {
-    unique_lock<mutex> lck(mtx_urb_delivering_queue);
-    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue_locked; });
-    urb_delivering_queue_locked = true;
-    this->urb_delivering_queue->push(msg);
-    urb_delivering_queue_locked = false;
-    cv_urb_delivering_queue.notify_all();
-
-    //urb_delivery_log(msg);
+    urb_delivering_queue.enqueue(msg);
 }
 
 
@@ -60,14 +50,11 @@ void UrBroadcast::urb_deliver(b_message &msg) {
  * @return the head of urb_delivering_queue
  */
 b_message UrBroadcast::get_next_urb_delivered() {
-    unique_lock<mutex> lck(mtx_urb_delivering_queue);
-    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue->empty(); });
-    urb_delivering_queue_locked = true;
-    b_message next_message = this->urb_delivering_queue->front();
-    this->urb_delivering_queue->pop();
-    urb_delivering_queue_locked = false;
-    cv_urb_delivering_queue.notify_all();
-    return next_message;
+    b_message *front = urb_delivering_queue.peek();
+    while (front == nullptr)
+        front = urb_delivering_queue.peek();
+    assert(urb_delivering_queue.pop());
+    return *front;
 }
 
 
@@ -116,6 +103,11 @@ int UrBroadcast::get_number_of_processes() {
 }
 
 
+b_message UrBroadcast::get_next_beb_delivered() {
+    return beb->get_next_beb_delivered();
+}
+
+
 /**
  * This method gets messages from the shared queue between BEB and URB and handle them
  * It is the way URB can interact with BEB.
@@ -125,13 +117,7 @@ int UrBroadcast::get_number_of_processes() {
 void handle_beb_delivery(UrBroadcast *urb) {
     while (true) {
         // First retrieves the message from the queue.
-        unique_lock<mutex> lck(mtx_beb_urb);
-        cv_beb_urb.wait(lck, [&] { return !queue_beb_urb.empty(); });
-        queue_beb_urb_locked = true;
-        b_message msg = queue_beb_urb.front();
-        queue_beb_urb.pop();
-        queue_beb_urb_locked = false;
-        cv_beb_urb.notify_one();
+        b_message msg = urb->get_next_beb_delivered();
 
         // Add the message to acked ones.
         urb->mtx_acks.lock();

@@ -2,9 +2,12 @@
 
 #include "utilities.h"
 #include "Link.h"
+#include "readerwriterqueue.h"
 
 #ifndef DISTRIBUTED_ALGORITHMS_BEBROADCAST_H
 #define DISTRIBUTED_ALGORITHMS_BEBROADCAST_H
+
+using namespace moodycamel;
 
 /**
  * This class represent the best-effort broadcast abstraction
@@ -19,6 +22,7 @@ public:
     void init();
     void beb_broadcast(b_message &msg);
     void beb_deliver(b_message &msg);
+    b_message get_next_beb_delivered();
 };
 
 void run_deliverer_beb(Link* link, BeBroadcast* beb_broadcast);

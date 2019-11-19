@@ -1,5 +1,6 @@
 #include "BeBroadcast.h"
 
+ReaderWriterQueue<b_message> beb_delivering_queue(200);
 
 BeBroadcast::BeBroadcast(Link* link, int number_of_processes, int number_of_messages){
     this->link = link;
@@ -36,12 +37,16 @@ void BeBroadcast::beb_broadcast(b_message &msg) {
  */
 void BeBroadcast::beb_deliver(b_message &msg) {
     // Put the message in the queue so that it can be delivered to urb.
-    unique_lock<mutex> lck(mtx_beb_urb);
-    cv_beb_urb.wait(lck, [&] { return !queue_beb_urb_locked; });
-    queue_beb_urb_locked = true;
-    queue_beb_urb.push(msg);
-    queue_beb_urb_locked = false;
-    cv_beb_urb.notify_one();
+    beb_delivering_queue.enqueue(msg);
+}
+
+
+b_message BeBroadcast::get_next_beb_delivered() {
+    b_message *front = beb_delivering_queue.peek();
+    while (front == nullptr)
+        front = beb_delivering_queue.peek();
+    assert(beb_delivering_queue.pop());
+    return *front;
 }
 
 

@@ -106,16 +106,5 @@ string to_string(pp2p_message &msg);
 void urb_broadcast_log(b_message& msg);
 void urb_delivery_log(b_message& msg);
 
-
-/**
- * These are used to handle the queue that is in the middle between beb and urb,
- * it contains the messages delivered by beb and that should be handled by urb
- */
-extern queue<b_message> queue_beb_urb; // the actual queue
-
-extern condition_variable cv_beb_urb;  //
-extern mutex mtx_beb_urb;              // to handle concurrency on the queue
-extern bool queue_beb_urb_locked;      //
-
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 

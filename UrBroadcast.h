@@ -5,8 +5,10 @@
 #include <condition_variable>
 #include <unordered_map>
 
+#include "readerwriterqueue.h"
 #include "BeBroadcast.h"
 
+using namespace moodycamel;
 using namespace std;
 
 // code freely adapted by https://stackoverflow.com/questions/15160889/how-can-i-make-an-unordered-set-of-pairs-of-integers-in-c
@@ -22,7 +24,6 @@ class UrBroadcast {
 private:
     int number_of_processes;
     int number_of_messages;
-    queue<b_message> *urb_delivering_queue;
 public:
     BeBroadcast *beb;
     unordered_set<pair<int,int>, pair_hash> delivered; // both delivered and forward are indexed by sender, sequence number.
@@ -42,6 +43,8 @@ public:
     int acks_received(b_message &msg);
     int get_number_of_processes();
     void addDelivered(b_message &msg);
+
+    b_message get_next_beb_delivered();
 };
 
 void handle_beb_delivery(UrBroadcast* urb);
