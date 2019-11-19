@@ -8,8 +8,9 @@
 #                  should run.
 #
 
-number_of_processes=10
-evaluation_time=50
+number_of_processes=3
+number_of_messages=20
+evaluation_time=10
 init_time=2
 
 python3 generate_membership_file.py $number_of_processes
@@ -17,7 +18,7 @@ python3 generate_membership_file.py $number_of_processes
 #start 5 processes
 for i in `seq 1 $number_of_processes`
 do
-    ./da_proc $i membership 10000 &
+    ./da_proc $i membership $number_of_messages &
     da_proc_id[$i]=$!
 done
 
