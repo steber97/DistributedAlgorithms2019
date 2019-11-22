@@ -28,18 +28,12 @@
 
 #define MAXLINE 1024
 
-using namespace std;
 using namespace moodycamel;
 
+extern atomic<bool> stop_link_daemons;
 
 /// These variables are useful to handle concurrency on data structure accessed by the threads sender and receiver
 extern mutex mtx_acks;
-
-extern atomic<bool> stop_pp2p_receiver;
-extern atomic<bool> stop_pp2p_sender;
-extern atomic<bool> stop_pp2p_get_msg;
-extern atomic<bool> stop_ack_enqueuer;
-extern atomic<bool> stop_resender;
 
 /// Both acks and pl_delivered are indexed in this way:
 // the vector is indexed by the process number in the perfect link message

@@ -1,5 +1,7 @@
 #include "UrBroadcast.h"
 
+atomic<bool> stop_urb_daemon(false);
+
 BlockingReaderWriterQueue<b_message> urb_delivering_queue(100);
 
 UrBroadcast::UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_of_messages) {
@@ -117,10 +119,8 @@ b_message UrBroadcast::get_next_beb_delivered() {
  * @param urb
  */
 void handle_beb_delivery(UrBroadcast *urb) {
-    while (true) {
-        // First retrieves the message from the queue.
-        b_message msg = urb->get_next_beb_delivered();
-
+    b_message msg = urb->get_next_beb_delivered();
+    while (!stop_urb_daemon.load()) {
         // Add the message to acked ones.
         urb->mtx_acks.lock();
         if (urb->acks.find({msg.first_sender, msg.seq_number}) == urb->acks.end()) {
@@ -151,6 +151,8 @@ void handle_beb_delivery(UrBroadcast *urb) {
                 urb->urb_deliver(msg);
             }
         }
+
+        msg = urb->get_next_beb_delivered();
     }
 }
 

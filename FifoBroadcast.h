@@ -8,15 +8,13 @@
 
 #include "UrBroadcast.h"
 
+extern atomic<bool> stop_fifo_daemon;
+
 class FifoBroadcast {
 private:
     UrBroadcast *urb;
 
 public:
-    //queue<pair<int, int>> pending; //set of pending messages stored as pair of int,
-                                    //the first one is the process number of the sender,
-                                    //the second one is the sequence number of the messag
-
     vector<unordered_set<int>> pending;   // indexed by sender and sequence number;
     vector<int> next_to_deliver;
     FifoBroadcast(UrBroadcast *urb,int number_of_processes);

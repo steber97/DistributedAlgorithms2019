@@ -9,6 +9,8 @@
 
 using namespace moodycamel;
 
+extern atomic<bool> stop_beb_daemon;
+
 /**
  * This class represent the best-effort broadcast abstraction
  */

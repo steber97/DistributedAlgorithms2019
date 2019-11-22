@@ -10,14 +10,12 @@
 #include <mutex>
 #include <condition_variable>
 #include <queue>
-#include <assert.h>
 #include <atomic>
 
 using namespace std;
 
 extern mutex mtx_log;
 extern vector<string> log_actions;
-
 
 /**
  * This is the broadcast message, it is used at the broadcast level
@@ -77,7 +75,7 @@ struct pp2p_message  {
     }
 };
 
-bool is_pp2p_fake(pp2p_message);
+
 pp2p_message create_fake_pp2p();
 
 /**

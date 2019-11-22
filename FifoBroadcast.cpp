@@ -1,5 +1,7 @@
 #include "FifoBroadcast.h"
 
+atomic<bool> stop_fifo_daemon(false);
+
 FifoBroadcast::FifoBroadcast(UrBroadcast *urb, int number_of_processes) {
     this->urb = urb;
     this->next_to_deliver.resize(number_of_processes+1, 1);   // they are 1 plus the normal size, as we start counting by 1
@@ -33,8 +35,8 @@ b_message FifoBroadcast::get_next_urb_delivered() {
 
 
 void handle_urb_delivered(FifoBroadcast *fb) {
-    while (true) {
-        b_message msg = fb->get_next_urb_delivered();
+    b_message msg = fb->get_next_urb_delivered();;
+    while (!stop_fifo_daemon.load()) {
         fb->pending[msg.first_sender].insert(msg.seq_number);
         while(fb->pending[msg.first_sender].find(fb->next_to_deliver[msg.first_sender]) != fb->pending[msg.first_sender].end()){
             int seq_number = fb->next_to_deliver[msg.first_sender];
@@ -43,5 +45,6 @@ void handle_urb_delivered(FifoBroadcast *fb) {
             fb->fb_deliver(msg_to_deliver);
             fb->pending[msg.first_sender].erase(seq_number);
         }
+        msg = fb->get_next_urb_delivered();
     }
 }

@@ -30,15 +30,6 @@ unordered_map<int, pair<string, int>> * parse_input_data(string &membership_file
 }
 
 
-/**
- * A fake message is a message with a sequence number equal to -1
- * @param msg
- * @return
- */
-bool is_pp2p_fake(pp2p_message msg){
-    return msg.seq_number == -1;
-}
-
 pp2p_message create_fake_pp2p(){
     b_message fake_payload(-1, -1);
     return pp2p_message(false, -1LL, -1, fake_payload);

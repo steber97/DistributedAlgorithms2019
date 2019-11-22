@@ -31,14 +31,13 @@ static void stop(int signum) {
     //immediately stop network packet processing
     printf("Immediately stopping network packet processing.\n");
 
-	// Stop delivering and sending message at the pp2p layer!
-    shutdown(sockfd, SHUT_RDWR);
+    stop_fifo_daemon.store(true);
+    stop_urb_daemon.store(true);
+    stop_beb_daemon.store(true);
+    stop_link_daemons.store(true);
 
-    stop_pp2p_sender.store(true);
-    stop_pp2p_receiver.store(true);
-    stop_pp2p_get_msg.store(true);
-    stop_ack_enqueuer.store(true);
-    stop_resender.store(true);
+    // Stop delivering and sending message at the pp2p layer!
+    shutdown(sockfd, SHUT_RDWR);
 
     sleep(2);   // wait for sender and receiver to stop, so that after the below writing no message is received or sent.
 
@@ -58,7 +57,7 @@ static void stop(int signum) {
     sleep(5);
 
 	//exit directly from signal handler
-	terminate();
+	exit(0);
 }
 
 

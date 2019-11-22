@@ -9,7 +9,8 @@
 #include "BeBroadcast.h"
 
 using namespace moodycamel;
-using namespace std;
+
+extern atomic<bool> stop_urb_daemon;
 
 // code freely adapted by https://stackoverflow.com/questions/15160889/how-can-i-make-an-unordered-set-of-pairs-of-integers-in-c
 struct pair_hash {
@@ -43,7 +44,6 @@ public:
     int acks_received(b_message &msg);
     int get_number_of_processes();
     void addDelivered(b_message &msg);
-
     b_message get_next_beb_delivered();
 };
 

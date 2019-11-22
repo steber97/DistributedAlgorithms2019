@@ -1,15 +1,8 @@
 #include "Link.h"
 
-//to handle concurrency on the incoming_messages queue between the manager of the link and the receiver
-mutex mtx_acks;
+atomic<bool> stop_link_daemons(false);
 
-atomic<bool> stop_pp2p_receiver(false);
-atomic<bool> stop_pp2p_sender(false);
-atomic<bool> stop_pp2p_get_msg(false);
-atomic<bool> stop_ack_enqueuer(false);
-atomic<bool> stop_resender(false);
-
-//These three data structures contain the incoming and the outgoing messages and the outgoing acks
+//These three data structures contain the incoming messages, the messages to resend and the outgoing acks
 BlockingReaderWriterQueue<pp2p_message> incoming_messages(1000);
 BlockingReaderWriterQueue<pair<int, pp2p_message>> outgoing_acks(1000);
 BlockingReaderWriterQueue<pair<int, pp2p_message>> messages_to_resend(1000);
@@ -19,6 +12,7 @@ mutex mtx_outgoing_messages;
 condition_variable cv_outgoing_messages;
 queue<pair<int, pp2p_message>> outgoing_messages;
 
+mutex mtx_acks;
 vector<unordered_set<long long int>> acks;  // acks received
 vector<unordered_set<long long int>> pl_delivered;  //sequence numbers of the delivered messages at perfect link level
                                                     //ordered by the process that sent them
@@ -102,8 +96,11 @@ void Link::send_ack(pp2p_message &msg) {
  */
 pp2p_message Link::get_next_message(){
     pp2p_message msg = create_fake_pp2p();
-    while(!stop_pp2p_get_msg.load()) {
+    while(true) {
         incoming_messages.wait_dequeue(msg);
+
+        if (stop_link_daemons.load())
+            return msg;
 
 #ifdef DEBUG
         cout << process_number << " ha ricevuto (" << msg.proc_number << ", " << msg.seq_number << ")" << endl;
@@ -122,9 +119,6 @@ pp2p_message Link::get_next_message(){
             }
         }
     }
-    // This happens only when the process is killed, no harm can be done!
-    pp2p_message fake = create_fake_pp2p();
-    return fake;
 }
 
 
@@ -136,9 +130,15 @@ pp2p_message Link::get_next_message(){
  */
 void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int sockfd) {
     struct sockaddr_in d_addr;
-    while (!stop_pp2p_sender.load()) {
+    while (true) {
         unique_lock<mutex> lck(mtx_outgoing_messages);
         cv_outgoing_messages.wait(lck, [] { return !outgoing_messages.empty(); });
+
+        if (stop_link_daemons.load()) {
+            cv_outgoing_messages.notify_all();
+            break;
+        }
+
         outgoing_messages_locked = true;
         pair<int, pp2p_message> dest_and_msg = outgoing_messages.front();
         outgoing_messages.pop();
@@ -179,12 +179,20 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
  * This procedure is used to pick ack from the SRSW queue of outgoing acks and push them in the queue of outgoing messages
  */
 void run_ack_enqueuer() {
-    while (!stop_ack_enqueuer.load()) {
+    while (true) {
         pair<int, pp2p_message> outgoing_ack(-1, create_fake_pp2p());
         outgoing_acks.wait_dequeue(outgoing_ack);
 
+        if (stop_link_daemons.load()) break;
+
         unique_lock<mutex> lck(mtx_outgoing_messages);
         cv_outgoing_messages.wait(lck, []{ return !outgoing_messages_locked; });
+
+        if (stop_link_daemons.load()) {
+            cv_outgoing_messages.notify_all();
+            break;
+        }
+
         outgoing_messages_locked = true;
         outgoing_messages.push(outgoing_ack);
         outgoing_messages_locked = false;
@@ -202,12 +210,15 @@ void run_ack_enqueuer() {
  * @param link
  */
 void run_receiver(Link *link) {
-    while (!stop_pp2p_receiver.load()) {
+    while (true) {
         unsigned int len;
         char buf[1024];
         struct sockaddr_in sender_addr;
         int n = recvfrom(link->get_sockfd(), (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
                          &len);
+
+        if (stop_link_daemons.load()) break;
+
         buf[n] = '\0';
         pp2p_message msg = parse_message(string(buf));
 
@@ -223,18 +234,26 @@ void run_receiver(Link *link) {
 
 
 void run_resender() {
-    while (!stop_resender.load()) {
+    while (true) {
         pair<int, pp2p_message> msg_to_resend(-1, create_fake_pp2p());
         messages_to_resend.wait_dequeue(msg_to_resend);
 
+        if (stop_link_daemons.load()) break;
+
         unique_lock<mutex> lck(mtx_outgoing_messages);
         cv_outgoing_messages.wait(lck, []{ return !outgoing_messages_locked; });
+
+        if (stop_link_daemons.load()) {
+            cv_outgoing_messages.notify_all();
+            break;
+        }
+
         outgoing_messages_locked = true;
         outgoing_messages.push(msg_to_resend);
         outgoing_messages_locked = false;
         cv_outgoing_messages.notify_all();
 
-        usleep(1000);
+        usleep(50);
     }
 
     cout << "Stopped resender" << endl;
