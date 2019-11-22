@@ -22,27 +22,30 @@
 #include <unordered_set>
 
 #include "utilities.h"
+#include "readerwriterqueue.h"
 
 // #define DEBUG
 
 #define MAXLINE 1024
 
 using namespace std;
+using namespace moodycamel;
+
 
 /// These variables are useful to handle concurrency on data structure accessed by the threads sender and receiver
-extern mutex mtx_receiver, mtx_sender, mtx_acks;
-extern condition_variable cv_receiver;
-extern queue<pp2p_message> incoming_messages;
+extern mutex mtx_acks;
 
-/// Queue of messages that have to be sent
-extern queue<pair<int,pp2p_message>> outgoing_messages;
+extern atomic<bool> stop_pp2p_receiver;
+extern atomic<bool> stop_pp2p_sender;
+extern atomic<bool> stop_pp2p_get_msg;
+extern atomic<bool> stop_ack_enqueuer;
+extern atomic<bool> stop_resender;
 
 /// Both acks and pl_delivered are indexed in this way:
 // the vector is indexed by the process number in the perfect link message
 // the pair is made of the sender and the sequence number in the broadcast message.
 
 extern vector<unordered_set<long long int>> acks;  // acks at pp2p level
-
 extern vector<unordered_set<long long int>> pl_delivered;  // Delivered by perfect link.
 
 
@@ -76,6 +79,10 @@ public:
     pp2p_message get_next_message();
 };
 
+void run_ack_enqueuer();
 void run_receiver(Link *link);
+void run_resender();
+bool is_acked(int proc_number, long long seq_number);
+
 
 #endif //DISTRIBUTEDALGORITHMS2019_MANAGER_H

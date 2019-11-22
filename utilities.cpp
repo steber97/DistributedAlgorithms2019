@@ -4,15 +4,6 @@
 mutex mtx_log;
 vector<string> log_actions;
 
-// This is the mutex used to communicate with the shared queue between the urb and the beb.
-mutex mtx_beb_urb;
-queue<b_message> queue_beb_urb;
-bool queue_beb_urb_locked = false;
-condition_variable cv_beb_urb;
-
-
-mutex mtx_pp2p_sender, mtx_pp2p_receiver, mtx_pp2p_get_msg;
-bool stop_pp2p_receiver = false, stop_pp2p_sender = false, stop_pp2p_get_msg = false;
 
 /**
  * Parses the input file
@@ -66,6 +57,8 @@ pp2p_message create_fake_pp2p(){
  * @return
  */
 pp2p_message parse_message(const string &msg) {
+    if (msg.length() == 0)
+        return create_fake_pp2p();
     size_t current, previous = 0;
     vector<string> cont_outer;
     char delim_outer = '/';
@@ -154,6 +147,7 @@ void urb_broadcast_log(b_message& msg) {
  */
 void urb_delivery_log(b_message& msg) {
     string log_msg = "d " + to_string(msg.first_sender) + " " + to_string(msg.seq_number);
+
     mtx_log.lock();
     log_actions.push_back(log_msg);
     mtx_log.unlock();

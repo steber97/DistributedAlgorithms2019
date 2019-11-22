@@ -1,6 +1,6 @@
 #include "UrBroadcast.h"
 
-ReaderWriterQueue<b_message> urb_delivering_queue(100);
+BlockingReaderWriterQueue<b_message> urb_delivering_queue(100);
 
 UrBroadcast::UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_of_messages) {
     this->beb = beb;
@@ -40,6 +40,10 @@ void UrBroadcast::urb_broadcast(b_message &msg)  {
  */
 void UrBroadcast::urb_deliver(b_message &msg) {
     urb_delivering_queue.enqueue(msg);
+
+#ifdef DEBUG
+    cout << "URB-delivered the message " << msg.seq_number << " sent by " << msg.first_sender << endl;
+#endif
 }
 
 
@@ -50,11 +54,9 @@ void UrBroadcast::urb_deliver(b_message &msg) {
  * @return the head of urb_delivering_queue
  */
 b_message UrBroadcast::get_next_urb_delivered() {
-    b_message *front = urb_delivering_queue.peek();
-    while (front == nullptr)
-        front = urb_delivering_queue.peek();
-    assert(urb_delivering_queue.pop());
-    return *front;
+    b_message front;
+    urb_delivering_queue.wait_dequeue(front);
+    return front;
 }
 
 

@@ -1,7 +1,5 @@
 #include "FifoBroadcast.h"
 
-mutex mtx_pending;
-
 FifoBroadcast::FifoBroadcast(UrBroadcast *urb, int number_of_processes) {
     this->urb = urb;
     this->next_to_deliver.resize(number_of_processes+1, 1);   // they are 1 plus the normal size, as we start counting by 1
@@ -23,6 +21,10 @@ void FifoBroadcast::fb_broadcast(b_message &msg) {
 
 void FifoBroadcast::fb_deliver(b_message &msg_to_deliver) {
     urb_delivery_log(msg_to_deliver);
+
+#ifdef DEBUG
+    cout << link->get_process_number() << " URB-delivered the message " << msg.seq_number << " sent by " << msg.first_sender << endl;
+#endif
 }
 
 b_message FifoBroadcast::get_next_urb_delivered() {

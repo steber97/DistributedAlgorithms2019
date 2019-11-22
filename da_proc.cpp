@@ -28,25 +28,19 @@ static void stop(int signum) {
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGINT, SIG_DFL);
 
+    //immediately stop network packet processing
+    printf("Immediately stopping network packet processing.\n");
+
 	// Stop delivering and sending message at the pp2p layer!
     shutdown(sockfd, SHUT_RDWR);
 
-    mtx_pp2p_sender.lock();
-    stop_pp2p_sender = true;
-    mtx_pp2p_sender.unlock();
-
-    mtx_pp2p_receiver.lock();
-    stop_pp2p_receiver = true;
-    mtx_pp2p_receiver.unlock();
-
-    mtx_pp2p_get_msg.lock();
-    stop_pp2p_get_msg = true;
-    mtx_pp2p_get_msg.unlock();
+    stop_pp2p_sender.store(true);
+    stop_pp2p_receiver.store(true);
+    stop_pp2p_get_msg.store(true);
+    stop_ack_enqueuer.store(true);
+    stop_resender.store(true);
 
     sleep(2);   // wait for sender and receiver to stop, so that after the below writing no message is received or sent.
-
-    //immediately stop network packet processing
-	printf("Immediately stopping network packet processing.\n");
 
 	//write/flush output file if necessary
 	printf("Writing output.\n");
@@ -59,6 +53,7 @@ static void stop(int signum) {
         out << line << endl;
     }
     mtx_log.unlock();
+
     // Give time to every detached thread
     sleep(5);
 

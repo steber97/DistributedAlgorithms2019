@@ -11,18 +11,12 @@
 #include <condition_variable>
 #include <queue>
 #include <assert.h>
+#include <atomic>
 
 using namespace std;
 
 extern mutex mtx_log;
 extern vector<string> log_actions;
-
-extern mutex mtx_pp2p_receiver, mtx_pp2p_sender, mtx_pp2p_get_msg;
-extern bool stop_pp2p_receiver;
-extern bool stop_pp2p_sender;
-extern bool stop_pp2p_get_msg;
-
-bool check_concurrency_stop(mutex& mtx, bool& variable);
 
 
 /**
@@ -38,6 +32,7 @@ struct b_message  {
 
     // for example, we may have process 1 broadcasting message 3 received by process 2.
     // In this case, even if the message is broadcasted by 1, the sender is going to be 2.
+
     int first_sender;    // initial sender of the message.
 
     b_message(){

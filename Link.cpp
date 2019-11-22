@@ -1,15 +1,25 @@
 #include "Link.h"
 
 //to handle concurrency on the incoming_messages queue between the manager of the link and the receiver
-bool queue_locked = false;
-mutex mtx_receiver, mtx_sender, mtx_acks;
-condition_variable cv_receiver;
+mutex mtx_acks;
 
-//These two data structure contain the incoming and the outgoing messages
-queue<pp2p_message> incoming_messages;
-queue<pair<int,pp2p_message>> outgoing_messages;
+atomic<bool> stop_pp2p_receiver(false);
+atomic<bool> stop_pp2p_sender(false);
+atomic<bool> stop_pp2p_get_msg(false);
+atomic<bool> stop_ack_enqueuer(false);
+atomic<bool> stop_resender(false);
 
-vector<unordered_set<long long int>> acks;  // acks
+//These three data structures contain the incoming and the outgoing messages and the outgoing acks
+BlockingReaderWriterQueue<pp2p_message> incoming_messages(1000);
+BlockingReaderWriterQueue<pair<int, pp2p_message>> outgoing_acks(1000);
+BlockingReaderWriterQueue<pair<int, pp2p_message>> messages_to_resend(1000);
+
+bool outgoing_messages_locked = false;
+mutex mtx_outgoing_messages;
+condition_variable cv_outgoing_messages;
+queue<pair<int, pp2p_message>> outgoing_messages;
+
+vector<unordered_set<long long int>> acks;  // acks received
 vector<unordered_set<long long int>> pl_delivered;  //sequence numbers of the delivered messages at perfect link level
                                                     //ordered by the process that sent them
 
@@ -29,8 +39,12 @@ Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>>
 void Link::init() {
     thread t_rec(run_receiver, this);
     thread t_send(run_sender, this->socket_by_process_id, this->sockfd);
+    thread t_ack_enq(run_ack_enqueuer);
+    thread t_resend(run_resender);
     t_rec.detach();
     t_send.detach();
+    t_ack_enq.detach();
+    t_resend.detach();
 }
 
 
@@ -55,16 +69,19 @@ int Link::get_process_number() {
  * @param msg the message to send
  */
 void Link::send_to(int d_process_number, pp2p_message& msg) {
-    // At the moment, we keep a queue of messages to send and not acked yet.
-    // Sending a pp2p_message consist easily in putting a new pp2p_message in the queue, and
-    // wait until the run_sender method sends it.
+    // We keep a queue of messages to send and not acked yet.
+    // Sending a pp2p_message consists easily in putting a new pp2p_message in the
+    // queue of outgoing messages, then the sender will send it.
 
     // Before doing it, we must choose a proper sequence number.
     long long seq_number = this->last_seq_number[d_process_number] ++;
     msg.seq_number = seq_number;
-    mtx_sender.lock();
+    unique_lock<mutex> lck(mtx_outgoing_messages);
+    cv_outgoing_messages.wait(lck, []{ return !outgoing_messages_locked; });
+    outgoing_messages_locked = true;
     outgoing_messages.push({d_process_number, msg});
-    mtx_sender.unlock();
+    outgoing_messages_locked = false;
+    cv_outgoing_messages.notify_all();
 }
 
 
@@ -73,65 +90,37 @@ void Link::send_to(int d_process_number, pp2p_message& msg) {
  */
 void Link::send_ack(pp2p_message &msg) {
     // Create the ack string (1-source process-sequence number of pp2p_message to ack)
-    int source_process = process_number;
-    int dest_process = msg.proc_number;
-
-    pp2p_message ack_message(true, msg.seq_number, source_process, msg.payload);
-
-    struct sockaddr_in d_addr;
-
-    memset(&d_addr, 0, sizeof(d_addr));
-    d_addr.sin_family = AF_INET;
-    d_addr.sin_port = (*socket_by_process_id)[dest_process].second;
-    string ip_address = (*socket_by_process_id)[dest_process].first;
-    // wrong line here
-    inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
-    string message_to_send = to_string(ack_message);
-    sendto(sockfd, message_to_send.c_str(), strlen(message_to_send.c_str()),
-           MSG_CONFIRM, (const struct sockaddr *) &d_addr,
-           sizeof(d_addr));
-
+    pp2p_message ack_message(true, msg.seq_number, process_number, msg.payload);
+    outgoing_acks.enqueue({msg.proc_number, ack_message});
 }
 
 /**
- * This methods get the incoming messages and then handles both the sending of the ack and the delivery at perfect link level.
+ * This method gets the incoming messages and then handles both the sending of the ack and the delivery at perfect link level.
  *
  * It avoids duplicate messages.
  * @return the next new message.
  */
 pp2p_message Link::get_next_message(){
-    // TODO: Check this while loop
-    while(true){
-        unique_lock<mutex> lck(mtx_receiver);
-        cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
-        queue_locked = true;
-        pp2p_message msg = incoming_messages.front();
-        incoming_messages.pop();
-        queue_locked = false;
-        cv_receiver.notify_one();
+    pp2p_message msg = create_fake_pp2p();
+    while(!stop_pp2p_get_msg.load()) {
+        incoming_messages.wait_dequeue(msg);
+
 #ifdef DEBUG
-        cout << "get next message" << endl;
+        cout << process_number << " ha ricevuto (" << msg.proc_number << ", " << msg.seq_number << ")" << endl;
 #endif
         if (msg.ack) {
-            // we received an ack;
-            // cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
+            // than we received an ack;
             mtx_acks.lock();
             acks[msg.proc_number].insert(msg.seq_number);
             mtx_acks.unlock();
         } else {
             this->send_ack(msg);
-            // Check if it has not been delivered already
+            // check if it has not been delivered already
             if (pl_delivered[msg.proc_number].find(msg.seq_number) == pl_delivered[msg.proc_number].end()) {
                 pl_delivered[msg.proc_number].insert(msg.seq_number);
                 return msg;
             }
         }
-        mtx_pp2p_get_msg.lock();
-        if (stop_pp2p_get_msg){
-            mtx_pp2p_get_msg.unlock();
-            break;
-        }
-        mtx_pp2p_get_msg.unlock();
     }
     // This happens only when the process is killed, no harm can be done!
     pp2p_message fake = create_fake_pp2p();
@@ -140,106 +129,122 @@ pp2p_message Link::get_next_message(){
 
 
 /**
- * Method run by the thread sender, it dequeues outgoing messages and then sends
+ * Procedure run by the thread sender, it dequeues outgoing messages and then sends
  *
  * @param socket_by_process_id  data structure that maps every process (number) to its (ip, port) pair
  * @param sockfd the socket fd of the link's owner process
  */
 void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int sockfd) {
     struct sockaddr_in d_addr;
-    while (true) {
-        mtx_sender.lock();
-        if (!outgoing_messages.empty()) {
-            pair<int, pp2p_message> dest_and_msg = outgoing_messages.front();
-            outgoing_messages.pop();
-            mtx_sender.unlock();
+    while (!stop_pp2p_sender.load()) {
+        unique_lock<mutex> lck(mtx_outgoing_messages);
+        cv_outgoing_messages.wait(lck, [] { return !outgoing_messages.empty(); });
+        outgoing_messages_locked = true;
+        pair<int, pp2p_message> dest_and_msg = outgoing_messages.front();
+        outgoing_messages.pop();
+        outgoing_messages_locked = false;
+        cv_outgoing_messages.notify_all();
 
-            mtx_acks.lock();
-            if (acks[dest_and_msg.first].find(dest_and_msg.second.seq_number) == acks[dest_and_msg.first].end()){
-                // Send only if the ack hasn't been received
-                mtx_acks.unlock();
-                string msg_s = to_string(dest_and_msg.second);
-                const char *msg_c = msg_s.c_str();
+        bool is_ack = dest_and_msg.second.ack;
 
-                memset(&d_addr, 0, sizeof(d_addr));
-                d_addr.sin_family = AF_INET;
-                d_addr.sin_port = (*socket_by_process_id)[dest_and_msg.first].second;
-                string ip_address = (*socket_by_process_id)[dest_and_msg.first].first;
-                // wrong line here
-                inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
-
-                sendto(sockfd, msg_c, strlen(msg_c),
-                       MSG_CONFIRM, (const struct sockaddr *) &d_addr,
-                       sizeof(d_addr));
 #ifdef DEBUG
-                cout << "Sent " << msg_c << " to " << dest_and_msg.first << endl;
+        cout << "inviando (" << dest_and_msg.second.proc_number << ", " << dest_and_msg.second.seq_number << ") a " << dest_and_msg.first << endl;
 #endif
-                if (!dest_and_msg.second.ack) {
-                    mtx_sender.lock();
-                    outgoing_messages.push(dest_and_msg);
-                    mtx_sender.unlock();
-                }
-            } else {
-                mtx_acks.unlock();
-            }
-        } else {
-            mtx_sender.unlock();
-        }
-        // wait a bit before sending the new message.
-        usleep(10);
-        mtx_pp2p_sender.lock();
-        if (stop_pp2p_sender){
-            mtx_pp2p_sender.unlock();
-            break;
-        }
-        mtx_pp2p_sender.unlock();
-    }
-}
 
-bool check_concurrency_variable(mutex& mtx, bool& variable){
-    mtx.lock();
-    bool res = variable;
-    mtx.unlock();
-    return res;
+        if (is_ack || !is_acked(dest_and_msg.first, dest_and_msg.second.seq_number)) {
+
+            string msg_s = to_string(dest_and_msg.second);
+            const char *msg_c = msg_s.c_str();
+
+            memset(&d_addr, 0, sizeof(d_addr));
+            d_addr.sin_family = AF_INET;
+            d_addr.sin_port = (*socket_by_process_id)[dest_and_msg.first].second;
+            string ip_address = (*socket_by_process_id)[dest_and_msg.first].first;
+            inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
+
+            sendto(sockfd, msg_c, strlen(msg_c),
+                   MSG_CONFIRM, (const struct sockaddr *) &d_addr,
+                   sizeof(d_addr));
+
+            if (!is_ack)
+                messages_to_resend.enqueue(dest_and_msg);
+        }
+    }
+
+    cout << "Stopped sender" << endl;
 }
 
 
 /**
- * This is the method run by the thread receiver, it listens on a certain port until it gets a message and then it
+ * This procedure is used to pick ack from the SRSW queue of outgoing acks and push them in the queue of outgoing messages
+ */
+void run_ack_enqueuer() {
+    while (!stop_ack_enqueuer.load()) {
+        pair<int, pp2p_message> outgoing_ack(-1, create_fake_pp2p());
+        outgoing_acks.wait_dequeue(outgoing_ack);
+
+        unique_lock<mutex> lck(mtx_outgoing_messages);
+        cv_outgoing_messages.wait(lck, []{ return !outgoing_messages_locked; });
+        outgoing_messages_locked = true;
+        outgoing_messages.push(outgoing_ack);
+        outgoing_messages_locked = false;
+        cv_outgoing_messages.notify_all();
+    }
+
+    cout << "Stopped ack enqueuer" << endl;
+}
+
+
+/**
+ * This is the procedure run by the thread receiver, it listens on a certain port until it gets a message and then it
  * puts the message the incoming_messages queue
  *
  * @param link
  */
 void run_receiver(Link *link) {
-    while (true) {
+    while (!stop_pp2p_receiver.load()) {
         unsigned int len;
         char buf[1024];
         struct sockaddr_in sender_addr;
         int n = recvfrom(link->get_sockfd(), (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
                          &len);
-
-        // stop in case da_proc received a sigterm!
-        mtx_pp2p_receiver.lock();
-        if (stop_pp2p_receiver){
-            mtx_pp2p_receiver.unlock();
-            break;
-        }
-        mtx_pp2p_receiver.unlock();
-
         buf[n] = '\0';
-
         pp2p_message msg = parse_message(string(buf));
+
 #ifdef DEBUG
-        cout << "\nNew message " << msg.proc_number << " " << msg.seq_number << endl;
+        cout << link->get_process_number() << " ha ricevuto il messaggio (" << msg.proc_number << ", " << msg.seq_number << ")" << endl;
 #endif
         // Put the message in the queue.
-        unique_lock<mutex> lck(mtx_receiver);
-        cv_receiver.wait(lck, [&] { return !queue_locked; });
-        queue_locked = true;
-        incoming_messages.push(msg);
-        queue_locked = false;
-        cv_receiver.notify_one();
-
-        // stop in case da_proc received a sigterm!
+        incoming_messages.enqueue(msg);
     }
+
+    cout << "Stopped receiver" << endl;
+}
+
+
+void run_resender() {
+    while (!stop_resender.load()) {
+        pair<int, pp2p_message> msg_to_resend(-1, create_fake_pp2p());
+        messages_to_resend.wait_dequeue(msg_to_resend);
+
+        unique_lock<mutex> lck(mtx_outgoing_messages);
+        cv_outgoing_messages.wait(lck, []{ return !outgoing_messages_locked; });
+        outgoing_messages_locked = true;
+        outgoing_messages.push(msg_to_resend);
+        outgoing_messages_locked = false;
+        cv_outgoing_messages.notify_all();
+
+        usleep(1000);
+    }
+
+    cout << "Stopped resender" << endl;
+}
+
+
+bool is_acked(int proc_number, long long seq_number) {
+    bool acked;
+    mtx_acks.lock();
+    acked = acks[proc_number].find(seq_number) != acks[proc_number].end();
+    mtx_acks.unlock();
+    return acked;
 }
