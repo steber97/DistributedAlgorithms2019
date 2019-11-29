@@ -18,5 +18,3 @@ while [ -n "$1" ]; do
 done
 
 echo -e "\nTEST SUCCEEDED.\n"
-
-touch PASS
