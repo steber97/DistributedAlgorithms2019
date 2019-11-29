@@ -15,6 +15,8 @@ number_of_messages=10000
 
 python3 generate_membership_file.py $number_of_processes
 
+make
+
 #start 5 processes
 for i in `seq 1 $number_of_processes`
 do
