@@ -16,7 +16,10 @@ may solve the issue.
 
 It could be added:
     1) check if no messages are repeated.
-    2) check if process delivers message which have not been broadcasted! 
+    2) check if process delivers message which have not been broadcasted!
+    
+USAGE
+    python3 check_local_causal_broadcast.py membership_file_name number_of_messages 
 """
 
 if __name__ == '__main__':
