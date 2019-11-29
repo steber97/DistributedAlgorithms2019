@@ -120,5 +120,11 @@ done
 
 echo "Correctness test done."
 
+#count delivered messages in the logs
+for i in `seq 1 5`
+do
+	python3 count_delivered.py $i
+done
+
 sudo tc qdisc del dev lo root
 echo "Stop messing up with network interface!!"

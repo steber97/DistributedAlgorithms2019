@@ -96,7 +96,7 @@ pp2p_message create_fake_pp2p();
  */
 pp2p_message parse_message(const string &msg);
 
-unordered_map<int, pair<string, int>>*parse_input_data(string &membership_file);
+pair<unordered_map<int, pair<string, int>> *, vector<vector<int>>*> parse_input_data(string &membership_file);
 
 string to_string(pp2p_message &msg);
 

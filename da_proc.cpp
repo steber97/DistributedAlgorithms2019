@@ -93,7 +93,11 @@ int main(int argc, char** argv) {
 
 	// input data contains both the number of messages to send per each process,
 	// and the mapping among processes and ip/port
-	unordered_map<int, pair<string, int>>* input_data = parse_input_data(membership_file);
+	pair<unordered_map<int, pair<string, int>>*, vector<vector<int>>*> parsed_data = parse_input_data(membership_file);
+
+    unordered_map<int, pair<string, int>>* input_data = parsed_data.first;
+    vector<vector<int>>* dependencies = parsed_data.second;
+
     int number_of_processes = input_data->size();
     int number_of_messages = stoi(argv[3]);
 

@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include "utilities.h"
 
 // these are used to cover the logging functions
@@ -21,7 +22,7 @@ bool stop_pp2p_receiver = false, stop_pp2p_sender = false, stop_pp2p_get_msg = f
  *          - the total number of message to be sent by each process
  *          - a map that contains info on ip and port for each process
  */
-unordered_map<int, pair<string, int>> * parse_input_data(string &membership_file) {
+pair<unordered_map<int, pair<string, int>> *, vector<vector<int>>*> parse_input_data(string &membership_file) {
     unordered_map<int, pair<string, int>> *socket_by_process_id = new(unordered_map<int, pair<string, int>>);
     ifstream mem_in(membership_file);
     int number_of_processes;
@@ -35,7 +36,19 @@ unordered_map<int, pair<string, int>> * parse_input_data(string &membership_file
         mem_in >> port;
         (*socket_by_process_id)[pr_n] = {ip, port};
     }
-    return socket_by_process_id;
+
+    /// this part here is used to get localized broadcast dependent data:
+    int x;
+    vector<vector<int>>* dependencies = new vector<vector<int>>(number_of_processes+1, vector<int>());
+    for (int i = 1; i<=number_of_processes; i++){
+        mem_in >> x ;
+        while ((mem_in.peek()!='\n')){
+            mem_in >> x ;
+            dependencies->at(i).push_back(x);
+        }
+    }
+
+    return {socket_by_process_id, dependencies};
 }
 
 
