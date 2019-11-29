@@ -13,6 +13,8 @@ time_to_finish=2
 
 init_time=2
 
+number_of_messages=5
+
 # configure lossy network simulation
 sudo tc qdisc add dev lo root netem 2>/dev/null
 sudo tc qdisc change dev lo root netem delay 50ms 200ms loss 10% 25% reorder 25% 50%
@@ -62,9 +64,9 @@ fi
 for i in `seq 1 5`
 do
     if [ "$2" = "C" ]; then
-      ./da_proc $i membership 100 &
+      ./da_proc $i membership $number_of_messages &
     else
-      java Da_proc $i membership 100 &
+      java Da_proc $i membership $number_of_messages &
     fi
     da_proc_id[$i]=$!
 done
