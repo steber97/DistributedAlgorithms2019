@@ -119,3 +119,6 @@ done
 ./check_output.sh 1 3 5
 
 echo "Correctness test done."
+
+sudo tc qdisc del dev lo root
+echo "Stop messing up with network interface!!"

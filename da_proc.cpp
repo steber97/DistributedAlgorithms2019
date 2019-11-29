@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
         //beb->beb_broadcast(msg);
         //urb->urb_broadcast(msg);
         fb->fb_broadcast(msg);
-        usleep(10000);
+        usleep(1000);
     }
 
     while(1) {
