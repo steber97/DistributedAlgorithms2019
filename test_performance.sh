@@ -8,12 +8,16 @@
 #                  should run.
 #
 
-number_of_processes=10
-evaluation_time=50
+number_of_processes=15
+evaluation_time=10
 init_time=2
-number_of_messages=10000
+number_of_messages=1000
+number_of_dependencies=5
 
-python3 generate_membership_file.py $number_of_processes
+sudo tc qdisc add dev lo root netem 2>/dev/null
+sudo tc qdisc change dev lo root netem delay 50ms 200ms loss 10% 25% reorder 25% 50%
+
+python3 generate_membership_file.py $number_of_processes $number_of_dependencies
 
 make
 
@@ -69,3 +73,7 @@ done
 
 
 echo "Performance test done."
+
+
+sudo tc qdisc del dev lo root
+echo "Stop messing up with network interface!!"

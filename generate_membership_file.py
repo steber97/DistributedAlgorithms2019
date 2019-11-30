@@ -17,6 +17,7 @@ def pad_with_zero(i):
 
 if __name__=='__main__':
     number_of_processes = int(sys.argv[1])
+    number_of_dependencies = int(sys.argv[2])
 
     f = open('membership', 'w')
     f.write(str(number_of_processes) + "\n")
@@ -27,5 +28,10 @@ if __name__=='__main__':
         f.write("12" + pad_with_zero(i) + "\n")
 
     for i in range(1, number_of_processes+1):
-        f.write(str(i) + " " + str(i % number_of_processes  + 1) )
+        dependencies = [ str((i + x)%number_of_processes + 1) for x in range(number_of_dependencies)]
+        dep_str = ""
+        for j, el in enumerate(dependencies):
+            dep_str += str(el) + (" " if j != len(dependencies) - 1 else "")
+        print(i, dep_str)
+        f.write(str(i) + " " + dep_str )
         f.write("\n")
