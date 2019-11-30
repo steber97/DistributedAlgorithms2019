@@ -5,6 +5,25 @@
 #include "utilities.h"
 
 
+struct LCOBHasher{
+    size_t
+    operator()(const lcob_message & obj) const
+    {
+        return obj.first_sender * 10000 + obj.seq_number;
+    }
+};
+
+struct LCOBComparator
+{
+    bool
+    operator()(const lcob_message & obj1, const lcob_message & obj2) const
+    {
+        if ((obj1.seq_number == obj2.seq_number) && (obj1.first_sender == obj2.first_sender))
+            return true;
+        return false;
+    }
+};
+
 class LocalCausalBroadcast {
 
 private:
@@ -12,7 +31,7 @@ private:
     FifoBroadcast* fb;
 
     vector<int> local_vc;
-    vector<lcob_message> pending;
+    unordered_set<lcob_message, LCOBHasher, LCOBComparator> pending;
     vector<vector<int>>* dependencies;
     int process_number;
 

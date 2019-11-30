@@ -7,7 +7,6 @@ LocalCausalBroadcast::LocalCausalBroadcast(int number_of_processes, int number_o
     this->number_of_messages = number_of_messages;
 
     this->local_vc.resize(number_of_processes+1, 0);
-    this->pending.resize(0);
 
     this->dependencies = dependencies;
     this->process_number = process_number;
@@ -34,9 +33,42 @@ void LocalCausalBroadcast::lcob_broadcast(lcob_message &lcob_msg) {
 }
 
 void LocalCausalBroadcast::lcob_deliver(lcob_message &msg_to_deliver) {
-    this->local_vc[msg_to_deliver.first_sender] ++;
-    lcob_delivery_log(msg_to_deliver);
+    //lcob_delivery_log(msg_to_deliver);
+    // first check if the message can be delivered immediately (vc is OK)
+    bool can_deliver = true;
+    for (int i = 1; i<this->local_vc.size() && can_deliver; i++){
+        // we start from 1
+        if(local_vc[i] < msg_to_deliver.vc[i]){
+            can_deliver = false;
+        }
+    }
 
+    if (can_deliver){
+        this->local_vc[msg_to_deliver.first_sender] ++;
+        lcob_delivery_log(msg_to_deliver);
+    }
+    else{
+        this->pending.insert(msg_to_deliver);
+        bool at_least_one = true;
+        while(at_least_one) {
+            at_least_one = false;
+            for (lcob_message m: this->pending) {
+                bool can_deliver = true;
+                for (int i = 1; i < this->local_vc.size() && can_deliver; i++) {
+                    // we start from 1
+                    if (local_vc[i] < m.vc[i]) {
+                        can_deliver = false;
+                    }
+                }
+                if (can_deliver) {
+                    at_least_one = true;
+                    this->local_vc[m.first_sender]++;
+                    this->pending.erase(m);
+                    lcob_delivery_log(m);
+                }
+            }
+        }
+    }
 }
 
 
