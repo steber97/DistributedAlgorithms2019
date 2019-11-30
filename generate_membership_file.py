@@ -25,3 +25,7 @@ if __name__=='__main__':
         f.write('127.0.0.1')
         f.write(" ")
         f.write("12" + pad_with_zero(i) + "\n")
+
+    for i in range(1, number_of_processes+1):
+        f.write(str(i) + " " + str(i % number_of_processes  + 1) )
+        f.write("\n")

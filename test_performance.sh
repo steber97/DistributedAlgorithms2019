@@ -59,5 +59,13 @@ do
 	python3 count_delivered.py $i
 done
 
+# Check fifo
+echo "check fifo"
+for i in `seq 1 $number_of_processes`
+do
+  filename="da_proc_${i}.out"
+	python3 check_fifo.py $filename
+done
+
 
 echo "Performance test done."

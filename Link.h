@@ -64,10 +64,11 @@ class Link {
 private:
     int sockfd;
     int process_number;
+    int number_of_processes;
     unordered_map<int, pair<string, int>>* socket_by_process_id;
     vector<long long> last_seq_number;
 public:
-    Link(int sockfd, int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id);
+    Link(int sockfd, int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id, const int number_of_processes);
     void init();
     int get_sockfd();
     int get_process_number();

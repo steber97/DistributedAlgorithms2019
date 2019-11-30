@@ -9,6 +9,7 @@
 #include "UrBroadcast.h"
 #include "BeBroadcast.h"
 #include "FifoBroadcast.h"
+#include "LocalCausalBroadcast.h"
 
 using namespace std;
 
@@ -119,10 +120,11 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    Link* link = new Link(sockfd, process_number, input_data);
+    Link* link = new Link(sockfd, process_number, input_data, number_of_processes);
     BeBroadcast* beb = new BeBroadcast(link, number_of_processes, number_of_messages);
     UrBroadcast* urb = new UrBroadcast(beb, number_of_processes, number_of_messages);
     FifoBroadcast* fb = new FifoBroadcast(urb, number_of_processes);
+    LocalCausalBroadcast* lcob = new LocalCausalBroadcast(number_of_processes, number_of_messages, fb);
 
     // Resize the number of acks (at the perfect link layer)
     acks.resize(number_of_processes+1, unordered_set<long long>());
@@ -146,11 +148,15 @@ int main(int argc, char** argv) {
     //broadcast messages
     printf("Broadcasting messages.\n");
 
+	vector<int> vector_clock_false(number_of_processes+1, 0);
+
     for (int i = 1; i <= number_of_messages; i++) {
-        b_message msg (i, link->get_process_number());
+        lcob_message lcob_msg (i, link->get_process_number(), vector_clock_false);
+        b_message msg(i, process_number, lcob_msg);
         //beb->beb_broadcast(msg);
         //urb->urb_broadcast(msg);
-        fb->fb_broadcast(msg);
+        //fb->fb_broadcast(msg);
+        lcob->lcob_broadcast(lcob_msg);
         usleep(1000);
     }
 

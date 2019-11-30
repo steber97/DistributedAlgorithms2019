@@ -24,6 +24,40 @@ extern bool stop_pp2p_get_msg;
 
 bool check_concurrency_stop(mutex& mtx, bool& variable);
 
+/**
+ * This class is used to perform local causal order broadcast (therefore its name)
+ * every message in lcob need to store a vector clock of dependencies.
+ * let's say that process i receives a message m from process j:
+ * then, the vc of message m stores, for every process, which messages process i must have delivered
+ * before being able to deliver m. Of course, process j fills the vc of message m, storing for every process k
+ * the last delivered message (by j) of k at the time of broadcasting m. (lol, very confusing, better to plot something to understand)
+ * If process k is not a dependency of j, then the vc always stores 0 for k.
+ * if process k is j itself (k == j), then the vc stores m-1 (in order to guarantee FIFO).
+ *
+ */
+struct lcob_message {
+    int seq_number;
+    int first_sender;
+    vector<int> vc;  // the vector clock. It must be as long as number_of_processes + 1 (they start from 1, position 0 is always going to be empty).
+
+    /// Initialize lcob message
+    lcob_message(int seq_number, int first_sender, vector<int>& vc) {
+        this->seq_number = seq_number;
+        this->first_sender = first_sender;
+        this->vc.resize(vc.size());
+        // Copy the vc
+        for (size_t i = 0; i<vc.size(); i++ ){
+            this->vc[i] = vc[i];
+        }
+    }
+
+    lcob_message(){
+        int seq_number = -1;
+        int first_sender = -1;
+    }
+};
+
+
 
 /**
  * This is the broadcast message, it is used at the broadcast level
@@ -40,15 +74,19 @@ struct b_message  {
     // In this case, even if the message is broadcasted by 1, the sender is going to be 2.
     int first_sender;    // initial sender of the message.
 
+    lcob_message lcob_m;
+
     b_message(){
+        // Shouldn't be called, but still it needs to be here (I think when initializing the variable when passing parameter to a function)
         this->seq_number = 0;
         this->first_sender = 0;
     }
 
-    b_message(int seq_number, int first_sender) {
+    b_message(int seq_number, int first_sender, lcob_message& lcob_m){
         // Constructor.
         this->seq_number = seq_number;
         this->first_sender = first_sender;
+        this->lcob_m = lcob_m;
     }
 };
 
@@ -80,10 +118,21 @@ struct pp2p_message  {
         this->proc_number = proc_number;
         this->payload = payload;
     }
+
 };
 
 bool is_pp2p_fake(pp2p_message);
-pp2p_message create_fake_pp2p();
+pp2p_message create_fake_pp2p(const int number_of_processes);
+
+
+/**
+ * emulates the python split function
+ * @param s the string to split
+ * @param c the char used to perform the split. must be a char (len==1)!
+ * @return the same result of python split method
+ */
+vector<string>* split(const string& s, char c);
+
 
 /**
  * @param msg is a string formatted like A-ID-SN where:

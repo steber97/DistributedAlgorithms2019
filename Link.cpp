@@ -14,12 +14,13 @@ vector<unordered_set<long long int>> pl_delivered;  //sequence numbers of the de
                                                     //ordered by the process that sent them
 
 
-Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id) {
+Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id, const int number_of_processes) {
     // Constructor
     this->sockfd = sockfd;
     this->process_number = process_number;
     this->socket_by_process_id = socket_by_process_id;
     this->last_seq_number.resize(this->socket_by_process_id->size() + 1, 0LL);  // Initialize all sequence numbers to zero.
+    this->number_of_processes = number_of_processes;
 }
 
 
@@ -134,7 +135,7 @@ pp2p_message Link::get_next_message(){
         mtx_pp2p_get_msg.unlock();
     }
     // This happens only when the process is killed, no harm can be done!
-    pp2p_message fake = create_fake_pp2p();
+    pp2p_message fake = create_fake_pp2p(this->number_of_processes);
     return fake;
 }
 
@@ -194,13 +195,6 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
         }
         mtx_pp2p_sender.unlock();
     }
-}
-
-bool check_concurrency_variable(mutex& mtx, bool& variable){
-    mtx.lock();
-    bool res = variable;
-    mtx.unlock();
-    return res;
 }
 
 

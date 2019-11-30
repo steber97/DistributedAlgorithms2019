@@ -39,7 +39,7 @@ void handle_urb_delivered(FifoBroadcast *fb) {
         // a lower sequence number starting from the same sender.
         if (fb->next_to_deliver[msg.first_sender] <= msg.seq_number) {
             for (int i = fb->next_to_deliver[msg.first_sender]; i <= msg.seq_number; i++) {
-                b_message msg_to_fifo_deliver(i, msg.first_sender);
+                b_message msg_to_fifo_deliver(i, msg.first_sender, msg.lcob_m);
                 fb->fb_deliver(msg_to_fifo_deliver);
             }
 
