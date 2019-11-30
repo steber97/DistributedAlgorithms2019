@@ -22,7 +22,7 @@ void LocalCausalBroadcast::lcob_broadcast(lcob_message &lcob_msg) {
     // before broadcasting it, you need to update the vc for this message.
     vector<int> vc (this->local_vc.size(), 0);  // copy the vc. set to zero all the entries for which we are not dependent.
 
-    for (int i = 0; i < this->dependencies->at(this->process_number).size(); i++){
+    for (size_t i = 0; i < this->dependencies->at(this->process_number).size(); i++){
         // set to values != 0 only the processes we depend on.
         vc[dependencies->at(this->process_number)[i]] = this->local_vc[dependencies->at(this->process_number)[i]];
     }
@@ -48,7 +48,7 @@ void handle_fifo_delivered(LocalCausalBroadcast *lcob){
         lcob_message msg = lcob->get_next_fifo_delivered();
         // first check if the message can be delivered immediately (vc is OK)
         bool can_deliver = true;
-        for (int i = 1; i<lcob->local_vc.size() && can_deliver; i++){
+        for (size_t i = 1; i<lcob->local_vc.size() && can_deliver; i++){
             // we start from 1
             if(lcob->local_vc[i] < msg.vc[i]){
                 can_deliver = false;
@@ -66,7 +66,7 @@ void handle_fifo_delivered(LocalCausalBroadcast *lcob){
                 at_least_one = false;
                 for (lcob_message m: lcob->pending) {
                     bool can_deliver = true;
-                    for (int i = 1; i < lcob->local_vc.size() && can_deliver; i++) {
+                    for (size_t i = 1; i < lcob->local_vc.size() && can_deliver; i++) {
                         // we start from 1
                         if (lcob->local_vc[i] < m.vc[i]) {
                             can_deliver = false;
@@ -75,7 +75,7 @@ void handle_fifo_delivered(LocalCausalBroadcast *lcob){
                     if (can_deliver) {
                         at_least_one = true;
                         lcob->local_vc[m.first_sender]++;
-                        lcob->pending.erase(m);
+                        lcob->pending.erase(m);   // remove the message from pending
                         lcob_delivery_log(m);
                     }
                 }

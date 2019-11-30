@@ -52,8 +52,6 @@ struct lcob_message {
     }
 
     lcob_message(){
-        int seq_number = -1;
-        int first_sender = -1;
     }
 };
 
@@ -78,8 +76,6 @@ struct b_message  {
 
     b_message(){
         // Shouldn't be called, but still it needs to be here (I think when initializing the variable when passing parameter to a function)
-        this->seq_number = 0;
-        this->first_sender = 0;
     }
 
     b_message(int seq_number, int first_sender, lcob_message& lcob_m){

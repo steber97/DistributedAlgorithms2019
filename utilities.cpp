@@ -45,7 +45,7 @@ pair<unordered_map<int, pair<string, int>> *, vector<vector<int>>*> parse_input_
         char sep = ' ';
         getline(mem_in, line);
         vector<string>* dep = split(line, sep);
-        for (int j = 0; j<dep->size(); j++){
+        for (size_t j = 0; j<dep->size(); j++){
             dependencies->at(i).push_back(stoi(dep->at(j)));
         }
     }
