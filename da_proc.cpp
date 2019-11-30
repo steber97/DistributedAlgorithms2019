@@ -136,6 +136,7 @@ int main(int argc, char** argv) {
     beb->init();
     urb->init();
     fb->init();
+    lcob->init();
 
     //wait until start signal
 	while(wait_for_start) {

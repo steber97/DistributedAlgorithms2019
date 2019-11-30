@@ -8,6 +8,7 @@ l = 1
 nextMessage = defaultdict(lambda : 1)
 
 with open(sys.argv[1]) as f:
+    print("file: ", sys.argv[1])
     for line in f:
         tokens = line.split()
         

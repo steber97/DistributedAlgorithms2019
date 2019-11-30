@@ -21,9 +21,11 @@ public:
     vector<int> next_to_deliver;
     FifoBroadcast(UrBroadcast *urb,int number_of_processes);
     void init();
-    void fb_broadcast(b_message &fifo_msg);
-    void fb_deliver(b_message &msg_to_deliver);
+    void fb_broadcast(b_message fifo_msg);
+    void fb_deliver(b_message msg_to_deliver);
     b_message get_next_urb_delivered();
+    lcob_message get_next_fifo_delivered();
+    queue<lcob_message*> *fifo_delivering_queue;
 };
 
 void handle_urb_delivered(FifoBroadcast *fb);

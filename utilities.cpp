@@ -218,3 +218,28 @@ void urb_delivery_log(b_message& msg) {
     log_actions.push_back(log_msg);
     mtx_log.unlock();
 }
+
+/**
+ * Appends the broadcast log to the list of activities.
+ * @param msg the broadcast message to log
+ */
+void lcob_broadcast_log(lcob_message& msg){
+    string log_msg = "b " + to_string(msg.seq_number) ;
+    mtx_log.lock();
+    // Append the broadcast log message
+    log_actions.push_back(log_msg);
+    mtx_log.unlock();
+}
+
+/**
+ * Appends the broadcast delivery to the list of activities.
+ * @param msg
+ * @param sender
+ * @return
+ */
+void lcob_delivery_log(lcob_message& msg){
+    string log_msg = "d " + to_string(msg.first_sender) + " " + to_string(msg.seq_number);
+    mtx_log.lock();
+    log_actions.push_back(log_msg);
+    mtx_log.unlock();
+}

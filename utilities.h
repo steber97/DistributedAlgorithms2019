@@ -156,6 +156,10 @@ void urb_broadcast_log(b_message& msg);
 void urb_delivery_log(b_message& msg);
 
 
+void lcob_broadcast_log(lcob_message& msg);
+void lcob_delivery_log(lcob_message& msg);
+
+
 /**
  * These are used to handle the queue that is in the middle between beb and urb,
  * it contains the messages delivered by beb and that should be handled by urb
