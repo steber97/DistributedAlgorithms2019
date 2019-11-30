@@ -30,13 +30,14 @@ private:
     int number_of_processes, number_of_messages;
     FifoBroadcast* fb;
 
+
+
+
+public:
     vector<int> local_vc;
     unordered_set<lcob_message, LCOBHasher, LCOBComparator> pending;
     vector<vector<int>>* dependencies;
     int process_number;
-
-
-public:
     LocalCausalBroadcast(int number_of_processes, int number_of_messages, FifoBroadcast* fb, vector<vector<int>>* dependencies, const int process_number);
     void lcob_broadcast(lcob_message& lcob_msg);
     void lcob_deliver(lcob_message &msg_to_deliver);
