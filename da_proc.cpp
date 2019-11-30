@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
     BeBroadcast* beb = new BeBroadcast(link, number_of_processes, number_of_messages);
     UrBroadcast* urb = new UrBroadcast(beb, number_of_processes, number_of_messages);
     FifoBroadcast* fb = new FifoBroadcast(urb, number_of_processes);
-    LocalCausalBroadcast* lcob = new LocalCausalBroadcast(number_of_processes, number_of_messages, fb);
+    LocalCausalBroadcast* lcob = new LocalCausalBroadcast(number_of_processes, number_of_messages, fb, dependencies, process_number);
 
     // Resize the number of acks (at the perfect link layer)
     acks.resize(number_of_processes+1, unordered_set<long long>());
@@ -149,6 +149,8 @@ int main(int argc, char** argv) {
     //broadcast messages
     printf("Broadcasting messages.\n");
 
+
+    // the vector clock can't be set here, it will be set in LocalCausalBroadcast, just before broadcasting.
 	vector<int> vector_clock_false(number_of_processes+1, 0);
 
     for (int i = 1; i <= number_of_messages; i++) {
