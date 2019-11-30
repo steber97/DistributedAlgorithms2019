@@ -45,19 +45,5 @@ void handle_urb_delivered(FifoBroadcast *fb) {
 
             fb->next_to_deliver[msg.first_sender] = msg.seq_number + 1;
         }
-
-
-        /// avoid making the silly assumption:
-        // put all messages in a pending data_structure, and wait before delivering them in order.
-        // Using this method doesn't worsen too much the performance, and should be more correct!
-//        fb->pending[msg.first_sender].insert(msg.seq_number);
-//
-//        while(fb->pending[msg.first_sender].find(fb->next_to_deliver[msg.first_sender]) != fb->pending[msg.first_sender].end()){
-//            int seq_number = fb->next_to_deliver[msg.first_sender];
-//            fb->next_to_deliver[msg.first_sender] ++;
-//            b_message msg_to_deliver(seq_number, msg.first_sender);
-//            fb->fb_deliver(msg_to_deliver);
-//            fb->pending[msg.first_sender].erase(seq_number);
-//        }
     }
 }

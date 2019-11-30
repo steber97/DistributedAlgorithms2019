@@ -37,27 +37,18 @@ pair<unordered_map<int, pair<string, int>> *, vector<vector<int>>*> parse_input_
         mem_in >> port;
         (*socket_by_process_id)[pr_n] = {ip, port};
     }
-
+    string line;
+    getline(mem_in, line);   // dunno why, looks like it reads the end of the last line.
     /// this part here is used to get localized broadcast dependent data:
-    // TODO: Still need to be done
     vector<vector<int>>* dependencies = new vector<vector<int>>(number_of_processes+1, vector<int>());
-//    for (int i = 1; i<=number_of_processes; i++){
-//        char sep = ' ';
-//        string line;
-//        getline(mem_in, line);
-//        vector<string>* dep = split(line, sep);
-//        for (int i = 0; i<dep->size(); i++){
-//            cout << dep->at(i);
-//        }
-//    }
-//
-//    usleep(1000000);
-//    for (int i = 0; i<dependencies->size(); i++){
-//        for (int j = 0; j<dependencies->at(i).size(); j++){
-//            cout << dependencies->at(i)[j] << " " ;
-//        }
-//        cout << endl;
-//    }
+    for (int i = 1; i<=number_of_processes; i++){
+        char sep = ' ';
+        getline(mem_in, line);
+        vector<string>* dep = split(line, sep);
+        for (int j = 0; j<dep->size(); j++){
+            dependencies->at(i).push_back(stoi(dep->at(j)));
+        }
+    }
 
     return {socket_by_process_id, dependencies};
 }
