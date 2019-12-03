@@ -8,8 +8,8 @@
 #                  should run.
 #
 
-number_of_processes=15
-evaluation_time=30
+number_of_processes=10
+evaluation_time=20
 init_time=2
 number_of_messages=10000
 number_of_dependencies=5
