@@ -33,8 +33,6 @@ class LocalCausalBroadcast {
 private:
     int number_of_processes, number_of_messages;
     T* interface;     // can be either fifo or urb
-    FifoBroadcast* fb;
-    UrBroadcast* urb;
     bool use_fifo = true;     // used to select whether we want to use fifo or urb, may be done better.
 
 public:
@@ -42,13 +40,11 @@ public:
     unordered_set<lcob_message, LCOBHasher, LCOBComparator> pending;
     vector<vector<int>>* dependencies;
     int process_number;
-    LocalCausalBroadcast<T>(int number_of_processes, int number_of_messages, FifoBroadcast* fb, T* interface, vector<vector<int>>* dependencies, const int process_number){
+    LocalCausalBroadcast<T>(int number_of_processes, int number_of_messages, T* interface, vector<vector<int>>* dependencies, const int process_number){
         this->number_of_processes = number_of_processes;
         this->number_of_messages = number_of_messages;
 
         this->local_vc.resize(number_of_processes+1, 0);
-
-        this->fb = fb;
         this->dependencies = dependencies;
         this->process_number = process_number;
         this->interface = interface;
@@ -67,13 +63,7 @@ public:
         b_message bMessage(lcob_msg.seq_number, lcob_msg.first_sender, lcob_msg);
         lcob_broadcast_log(lcob_msg);
 
-        /// CAREFUL HERE!
-        if (this->use_fifo)
-            // We use fifo
-            this->fb->fb_broadcast(bMessage);
-        else
-            // we use urb
-            this->urb->urb_broadcast(bMessage);
+        this->interface->broadcast(bMessage);  // either with FIFO or URB
     }
     void lcob_deliver(lcob_message &msg_to_deliver) {
         lcob_delivery_log(msg_to_deliver);
@@ -86,12 +76,6 @@ public:
         return this->interface->get_next_delivered();
     }
 
-
-    lcob_message get_next_urb_delivered() {    // This is used to build lcob on top of urb
-        return this->urb->get_next_urb_delivered().lcob_m;
-    }
-
-
     void init();  // init method, defined below.
 };
 
@@ -100,13 +84,13 @@ public:
  * @param lcob
  */
 template<typename T>
-void handle_fifo_delivered_lcob(LocalCausalBroadcast<T> *lcob);
+void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob);
 
 template<typename T>
 void LocalCausalBroadcast<T>::init() {  // init method to spawn the thread that will handle the fifo delivery
     // This can both use the urb or fifo handler!
-    thread t_fifo_delivered_handler(handle_fifo_delivered_lcob<FifoBroadcast>, this);
-    t_fifo_delivered_handler.detach();
+    thread t_delivered_handler(handle_delivered_lcob<T>, this);
+    t_delivered_handler.detach();
 
 }
 
@@ -122,7 +106,7 @@ void LocalCausalBroadcast<T>::init() {  // init method to spawn the thread that 
  * @param lcob
  */
 template<typename T>
-void handle_fifo_delivered_lcob(LocalCausalBroadcast<T> *lcob){
+void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob){
     while (true) {
         lcob_message msg = lcob->get_next_delivered();
         // lcob->lcob_deliver(msg);   // up to now deliver immediately, as if we are doing fifo

@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
     BeBroadcast* beb = new BeBroadcast(link, number_of_processes, number_of_messages);
     UrBroadcast* urb = new UrBroadcast(beb, number_of_processes, number_of_messages);
     FifoBroadcast* fb = new FifoBroadcast(urb, number_of_processes);
-    LocalCausalBroadcast<FifoBroadcast>* lcob = new LocalCausalBroadcast<FifoBroadcast>(number_of_processes, number_of_messages, fb, fb, dependencies, process_number);
+    LocalCausalBroadcast<FifoBroadcast>* lcob = new LocalCausalBroadcast<FifoBroadcast>(number_of_processes, number_of_messages, fb, dependencies, process_number);
 
     // Resize the number of acks (at the perfect link layer)
     acks.resize(number_of_processes+1, unordered_set<long long>());
