@@ -23,7 +23,9 @@ public:
     void init();
     void fb_broadcast(b_message fifo_msg);
     void fb_deliver(b_message msg_to_deliver);
+    void broadcast(b_message);
     b_message get_next_urb_delivered();
+
     lcob_message get_next_fifo_delivered();
     queue<lcob_message*> *fifo_delivering_queue;
 };

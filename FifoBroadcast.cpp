@@ -62,6 +62,15 @@ lcob_message FifoBroadcast::get_next_fifo_delivered() {
     return msg;
 }
 
+/**
+ * This is just a wrapper, so that both fifo and urb can be used to build on top of it lcob
+ * @param msg_to_deliver
+ */
+void FifoBroadcast::broadcast(b_message msg_to_deliver) {
+    // Just invokes fifo broadcast
+    this->fb_broadcast(msg_to_deliver);
+}
+
 
 void handle_urb_delivered(FifoBroadcast *fb) {
     while (true) {
