@@ -2,7 +2,7 @@
 #include "LocalCausalBroadcast.h"
 
 
-LocalCausalBroadcast::LocalCausalBroadcast(int number_of_processes, int number_of_messages, FifoBroadcast *fb, vector<vector<int>>* dependencies, const int process_number) {
+LocalCausalBroadcast::LocalCausalBroadcast(int number_of_processes, int number_of_messages, FifoBroadcast *fb, UrBroadcast* urb, vector<vector<int>>* dependencies, const int process_number) {
     this->number_of_processes = number_of_processes;
     this->number_of_messages = number_of_messages;
 
@@ -11,10 +11,12 @@ LocalCausalBroadcast::LocalCausalBroadcast(int number_of_processes, int number_o
     this->dependencies = dependencies;
     this->process_number = process_number;
     this->fb = fb;
+    this->urb = urb;
 }
 
 void LocalCausalBroadcast::init() {
-    thread t_fifo_delivered_handler(handle_fifo_delivered, this);
+    // This can both use the urb or fifo handler!
+    thread t_fifo_delivered_handler(handle_urb_delivered_lcob, this);
     t_fifo_delivered_handler.detach();
 }
 
@@ -26,15 +28,22 @@ void LocalCausalBroadcast::lcob_broadcast(lcob_message &lcob_msg) {
         // set to values != 0 only the processes we depend on.
         vc[dependencies->at(this->process_number)[i]] = this->local_vc[dependencies->at(this->process_number)[i]];
     }
+    vc[dependencies->at(this->process_number)[0]] = lcob_msg.seq_number - 1;   // set the dependency on the previous message of the same sender (FIFO property).
     lcob_msg.vc = vc;
     b_message bMessage(lcob_msg.seq_number, lcob_msg.first_sender, lcob_msg);
     lcob_broadcast_log(lcob_msg);
-    this->fb->fb_broadcast(bMessage);
+
+    /// CAREFUL HERE!
+    if (this->use_fifo)
+        // We use fifo
+        this->fb->fb_broadcast(bMessage);
+    else
+        // we use urb
+        this->urb->urb_broadcast(bMessage);
 }
 
 void LocalCausalBroadcast::lcob_deliver(lcob_message &msg_to_deliver) {
     lcob_delivery_log(msg_to_deliver);
-
 }
 
 
@@ -42,6 +51,10 @@ lcob_message LocalCausalBroadcast::get_next_fifo_delivered() {
     return this->fb->get_next_fifo_delivered();
 }
 
+
+lcob_message LocalCausalBroadcast::get_next_urb_delivered() {
+    return this->urb->get_next_urb_delivered().lcob_m;
+}
 
 void handle_fifo_delivered(LocalCausalBroadcast *lcob){
     while (true) {
@@ -88,6 +101,52 @@ void handle_fifo_delivered(LocalCausalBroadcast *lcob){
 
 
 
+        // lcob->lcob_deliver(msg);   // up to now deliver immediately, as if we are doing fifo
+    }
+}
+
+void handle_urb_delivered_lcob(LocalCausalBroadcast *lcob) {
+    while (true) {
+        lcob_message msg = lcob->get_next_urb_delivered();
+        // first check if the message can be delivered immediately (vc is OK)
+        bool can_deliver = true;
+        for (size_t i = 1; i<lcob->local_vc.size() && can_deliver; i++){
+            // we start from 1
+            if(lcob->local_vc[i] < msg.vc[i]){
+                can_deliver = false;
+            }
+        }
+
+        if (can_deliver){
+            lcob->local_vc[msg.first_sender] ++;
+            lcob->lcob_deliver(msg);
+
+
+            // When you finish dealing with the new message, check for older ones.
+            bool at_least_one = true;
+            while(at_least_one) {
+                at_least_one = false;
+                for (lcob_message m: lcob->pending) {
+                    bool can_deliver = true;
+                    for (size_t i = 1; i < lcob->local_vc.size() && can_deliver; i++) {
+                        // we start from 1
+                        if (lcob->local_vc[i] < m.vc[i]) {
+                            can_deliver = false;
+                        }
+                    }
+                    if (can_deliver) {
+                        at_least_one = true;
+                        lcob->local_vc[m.first_sender]++;
+                        lcob->pending.erase(m);   // remove the message from pending
+                        lcob_delivery_log(m);
+                    }
+                }
+            }
+        }
+        else{
+            // we can't do anything more! :/
+            lcob->pending.insert(msg);
+        }
         // lcob->lcob_deliver(msg);   // up to now deliver immediately, as if we are doing fifo
     }
 }

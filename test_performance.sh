@@ -9,7 +9,7 @@
 #
 
 number_of_processes=15
-evaluation_time=50
+evaluation_time=30
 init_time=2
 number_of_messages=10000
 number_of_dependencies=5
@@ -75,6 +75,7 @@ done
 
 echo "Performance test done."
 
+echo "Check local causal order broadcast"
 python3 check_local_causal_broadcast.py membership $number_of_messages
 
 # sudo tc qdisc del dev lo root
