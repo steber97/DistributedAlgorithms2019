@@ -71,6 +71,12 @@ void FifoBroadcast::broadcast(b_message msg_to_deliver) {
     this->fb_broadcast(msg_to_deliver);
 }
 
+lcob_message FifoBroadcast::get_next_delivered() {
+    // this is just a wrapper for get_next_fifo_delivered,
+    // so that it can be used by lcob_broadcast.
+    return this->get_next_fifo_delivered();
+}
+
 
 void handle_urb_delivered(FifoBroadcast *fb) {
     while (true) {

@@ -80,8 +80,10 @@ public:
     }
 
 
-    lcob_message get_next_fifo_delivered(){
-        return this->fb->get_next_fifo_delivered();
+    lcob_message get_next_delivered(){
+        // this gets the message from the interface.
+        // can be either fifo or urb. (depends on the template T).
+        return this->interface->get_next_delivered();
     }
 
 
@@ -90,7 +92,7 @@ public:
     }
 
 
-    void init();
+    void init();  // init method, defined below.
 };
 
 /**
@@ -109,10 +111,20 @@ void LocalCausalBroadcast<T>::init() {  // init method to spawn the thread that 
 }
 
 
+/**
+ * We can use as template the broadcast we want to use to build on top of it
+ * Local Causal Order Broadcast.
+ *
+ * Can either be URB or FIFO.
+ * The important thing is that both FIFO and URB implement a method broadcast
+ * (wrapper for fb_broadcast or ur_broadcast).
+ * @tparam T
+ * @param lcob
+ */
 template<typename T>
 void handle_fifo_delivered_lcob(LocalCausalBroadcast<T> *lcob){
     while (true) {
-        lcob_message msg = lcob->get_next_fifo_delivered();
+        lcob_message msg = lcob->get_next_delivered();
         // lcob->lcob_deliver(msg);   // up to now deliver immediately, as if we are doing fifo
         // first check if the message can be delivered immediately (vc is OK)
         bool can_deliver = true;

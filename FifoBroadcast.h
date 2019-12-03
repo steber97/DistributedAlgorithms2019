@@ -27,6 +27,7 @@ public:
     b_message get_next_urb_delivered();
 
     lcob_message get_next_fifo_delivered();
+    lcob_message get_next_delivered();
     queue<lcob_message*> *fifo_delivering_queue;
 };
 
