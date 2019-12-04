@@ -115,6 +115,17 @@ int UrBroadcast::get_number_of_processes() {
     return number_of_processes;
 }
 
+void UrBroadcast::broadcast(b_message &msg) {
+    // This is just a wrapper for the ur_broadcast, so that it can be
+    // invoked by lcob_broadcast.
+    this->urb_broadcast(msg);
+}
+
+b_message UrBroadcast::get_next_delivered() {
+    // just a wrapper with the same name as in fifo, so that can be used as template in Local Causal Reliable Broadcast.
+    return this->get_next_urb_delivered();
+}
+
 
 /**
  * This method gets messages from the shared queue between BEB and URB and handle them

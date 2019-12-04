@@ -123,8 +123,8 @@ int main(int argc, char** argv) {
     Link* link = new Link(sockfd, process_number, input_data, number_of_processes);
     BeBroadcast* beb = new BeBroadcast(link, number_of_processes, number_of_messages);
     UrBroadcast* urb = new UrBroadcast(beb, number_of_processes, number_of_messages);
-    FifoBroadcast* fb = new FifoBroadcast(urb, number_of_processes);
-    LocalCausalBroadcast<FifoBroadcast>* lcob = new LocalCausalBroadcast<FifoBroadcast>(number_of_processes, number_of_messages, fb, dependencies, process_number);
+    // FifoBroadcast* fb = new FifoBroadcast(urb, number_of_processes);
+    LocalCausalBroadcast<UrBroadcast>* lcob = new LocalCausalBroadcast<UrBroadcast>(number_of_processes, number_of_messages, urb, dependencies, process_number);
 
     // Resize the number of acks (at the perfect link layer)
     acks.resize(number_of_processes+1, unordered_set<long long>());
@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
     link->init();
     beb->init();
     urb->init();
-    fb->init();
+    // fb->init();
     lcob->init();
 
     //wait until start signal

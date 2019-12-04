@@ -38,6 +38,8 @@ public:
     void urb_broadcast(b_message &msg);
     void urb_deliver(b_message &msg);
     b_message get_next_urb_delivered();
+    b_message get_next_delivered();  //  a wrapper for the local_causal_reliable_broadcast.
+    void broadcast(b_message &msg);
     bool is_delivered(b_message &msg);
     int acks_received(b_message &msg);
     int get_number_of_processes();
