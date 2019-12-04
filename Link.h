@@ -22,20 +22,21 @@
 #include <unordered_set>
 
 #include "utilities.h"
+#include "readerwriterqueue.h"
 
 // #define DEBUG
 
 #define MAXLINE 1024
 
+using namespace moodycamel;
 using namespace std;
 
 /// These variables are useful to handle concurrency on data structure accessed by the threads sender and receiver
-extern mutex mtx_receiver, mtx_sender, mtx_acks;
-extern condition_variable cv_receiver;
+extern mutex mtx_incoming_messages, mtx_acks;
+extern condition_variable cv_incoming_messages;
 extern queue<pp2p_message> incoming_messages;
 
-/// Queue of messages that have to be sent
-extern queue<pair<int,pp2p_message>> outgoing_messages;
+/// TODO aggiungere extern
 
 /// Both acks and pl_delivered are indexed in this way:
 // the vector is indexed by the process number in the perfect link message
@@ -66,6 +67,7 @@ private:
     int process_number;
     unordered_map<int, pair<string, int>>* socket_by_process_id;
     vector<long long> last_seq_number;
+
 public:
     Link(int sockfd, int process_number, unordered_map<int, pair<string, int>> *socket_by_process_id);
     void init();
@@ -77,5 +79,7 @@ public:
 };
 
 void run_receiver(Link *link);
+
+void run_moderator();
 
 #endif //DISTRIBUTEDALGORITHMS2019_MANAGER_H

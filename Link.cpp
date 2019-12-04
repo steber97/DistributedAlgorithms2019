@@ -1,15 +1,21 @@
 #include "Link.h"
 
-//to handle concurrency on the incoming_messages queue between the manager of the link and the receiver
-bool queue_locked = false;
-mutex mtx_receiver, mtx_sender, mtx_acks;
-condition_variable cv_receiver;
+int num_of_processes;
+int window_size = 1;
 
-//These two data structure contain the incoming and the outgoing messages
+//to handle concurrency on the incoming_messages queue between the manager of the link and the receiver
+bool incoming_messages_locked = false;
+mutex mtx_incoming_messages, mtx_acks;
+condition_variable cv_incoming_messages;
 queue<pp2p_message> incoming_messages;
+
+vector<mutex> mtx_messages_to_send_by_process(100);
+vector<queue<pp2p_message>> messages_to_send_by_process;
+
+mutex mtx_outgoing_messages;
 queue<pair<int,pp2p_message>> outgoing_messages;
 
-vector<unordered_set<long long int>> acks;  // acks
+vector<unordered_set<long long int>> acks;  //acks
 vector<unordered_set<long long int>> pl_delivered;  //sequence numbers of the delivered messages at perfect link level
                                                     //ordered by the process that sent them
 
@@ -20,6 +26,13 @@ Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>>
     this->process_number = process_number;
     this->socket_by_process_id = socket_by_process_id;
     this->last_seq_number.resize(this->socket_by_process_id->size() + 1, 0LL);  // Initialize all sequence numbers to zero.
+
+    num_of_processes = socket_by_process_id->size();
+
+    for (unsigned i = 0; i < socket_by_process_id->size(); i++) {
+        queue<pp2p_message> q;
+        messages_to_send_by_process.push_back(q);
+    }
 }
 
 
@@ -29,8 +42,10 @@ Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>>
 void Link::init() {
     thread t_rec(run_receiver, this);
     thread t_send(run_sender, this->socket_by_process_id, this->sockfd);
+    thread t_mod(run_moderator);
     t_rec.detach();
     t_send.detach();
+    t_mod.detach();
 }
 
 
@@ -62,9 +77,9 @@ void Link::send_to(int d_process_number, pp2p_message& msg) {
     // Before doing it, we must choose a proper sequence number.
     long long seq_number = this->last_seq_number[d_process_number] ++;
     msg.seq_number = seq_number;
-    mtx_sender.lock();
-    outgoing_messages.push({d_process_number, msg});
-    mtx_sender.unlock();
+    mtx_messages_to_send_by_process[d_process_number - 1].lock();
+    messages_to_send_by_process[d_process_number - 1].push(msg);
+    mtx_messages_to_send_by_process[d_process_number - 1].unlock();
 }
 
 
@@ -102,13 +117,13 @@ void Link::send_ack(pp2p_message &msg) {
 pp2p_message Link::get_next_message(){
     // TODO: Check this while loop
     while(true){
-        unique_lock<mutex> lck(mtx_receiver);
-        cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
-        queue_locked = true;
+        unique_lock<mutex> lck(mtx_incoming_messages);
+        cv_incoming_messages.wait(lck, [&] { return !incoming_messages.empty(); });
+        incoming_messages_locked = true;
         pp2p_message msg = incoming_messages.front();
         incoming_messages.pop();
-        queue_locked = false;
-        cv_receiver.notify_one();
+        incoming_messages_locked = false;
+        cv_incoming_messages.notify_one();
 #ifdef DEBUG
         cout << "get next message" << endl;
 #endif
@@ -148,14 +163,14 @@ pp2p_message Link::get_next_message(){
 void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int sockfd) {
     struct sockaddr_in d_addr;
     while (true) {
-        mtx_sender.lock();
+        mtx_outgoing_messages.lock();
         if (!outgoing_messages.empty()) {
             pair<int, pp2p_message> dest_and_msg = outgoing_messages.front();
             outgoing_messages.pop();
-            mtx_sender.unlock();
+            mtx_outgoing_messages.unlock();
 
             mtx_acks.lock();
-            if (acks[dest_and_msg.first].find(dest_and_msg.second.seq_number) == acks[dest_and_msg.first].end()){
+            if (acks[dest_and_msg.first].find(dest_and_msg.second.seq_number) == acks[dest_and_msg.first].end()) {
                 // Send only if the ack hasn't been received
                 mtx_acks.unlock();
                 string msg_s = to_string(dest_and_msg.second);
@@ -175,32 +190,25 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
                 cout << "Sent " << msg_c << " to " << dest_and_msg.first << endl;
 #endif
                 if (!dest_and_msg.second.ack) {
-                    mtx_sender.lock();
-                    outgoing_messages.push(dest_and_msg);
-                    mtx_sender.unlock();
+                    mtx_messages_to_send_by_process[dest_and_msg.first - 1].lock();
+                    messages_to_send_by_process[dest_and_msg.first - 1].push(dest_and_msg.second);
+                    mtx_messages_to_send_by_process[dest_and_msg.first - 1].unlock();
                 }
             } else {
                 mtx_acks.unlock();
             }
-        } else {
-            mtx_sender.unlock();
-        }
-        // wait a bit before sending the new message.
-        usleep(10);
-        mtx_pp2p_sender.lock();
-        if (stop_pp2p_sender){
-            mtx_pp2p_sender.unlock();
-            break;
-        }
-        mtx_pp2p_sender.unlock();
-    }
-}
 
-bool check_concurrency_variable(mutex& mtx, bool& variable){
-    mtx.lock();
-    bool res = variable;
-    mtx.unlock();
-    return res;
+            // wait a bit before sending the new message.
+            usleep(10);
+            mtx_pp2p_sender.lock();
+            if (stop_pp2p_sender) {
+                mtx_pp2p_sender.unlock();
+                break;
+            }
+            mtx_pp2p_sender.unlock();
+        } else
+            mtx_outgoing_messages.unlock();
+    }
 }
 
 
@@ -224,12 +232,12 @@ void run_receiver(Link *link) {
         cout << "\nNew message " << msg.proc_number << " " << msg.seq_number << endl;
 #endif
         // Put the message in the queue.
-        unique_lock<mutex> lck(mtx_receiver);
-        cv_receiver.wait(lck, [&] { return !queue_locked; });
-        queue_locked = true;
+        unique_lock<mutex> lck(mtx_incoming_messages);
+        cv_incoming_messages.wait(lck, [&] { return !incoming_messages_locked; });
+        incoming_messages_locked = true;
         incoming_messages.push(msg);
-        queue_locked = false;
-        cv_receiver.notify_one();
+        incoming_messages_locked = false;
+        cv_incoming_messages.notify_one();
 
         // stop in case da_proc received a sigterm!
         mtx_pp2p_receiver.lock();
@@ -238,5 +246,28 @@ void run_receiver(Link *link) {
             break;
         }
         mtx_pp2p_receiver.unlock();
+    }
+}
+
+
+void run_moderator() {
+    int pn = 0;
+
+    while (true) {
+        mtx_messages_to_send_by_process[pn].lock();
+        if (!messages_to_send_by_process[pn].empty()) {
+            pp2p_message msg = messages_to_send_by_process[pn].front();
+
+            mtx_outgoing_messages.lock();
+            outgoing_messages.push({pn + 1, msg});
+            mtx_outgoing_messages.unlock();
+
+            messages_to_send_by_process[pn].pop();
+        }
+        mtx_messages_to_send_by_process[pn].unlock();
+
+        pn++;
+        if (pn == num_of_processes)
+            pn = 0;
     }
 }
