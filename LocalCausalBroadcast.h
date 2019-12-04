@@ -32,10 +32,9 @@ class LocalCausalBroadcast {
 
 private:
     int number_of_processes, number_of_messages;
-    T* interface;     // can be either fifo or urb
-    bool use_fifo = true;     // used to select whether we want to use fifo or urb, may be done better.
 
 public:
+    T* interface;     // can be either fifo or urb
     vector<int> local_vc;
     unordered_set<lcob_message, LCOBHasher, LCOBComparator> pending;
     vector<vector<int>>* dependencies;
@@ -69,11 +68,16 @@ public:
         lcob_delivery_log(msg_to_deliver);
     }
 
-
-    lcob_message get_next_delivered(){
+    lcob_message get_next_delivered(FifoBroadcast* fifo){
         // this gets the message from the interface.
         // can be either fifo or urb. (depends on the template T).
         return this->interface->get_next_delivered();
+    }
+
+    lcob_message get_next_delivered(UrBroadcast* urb){
+        // this gets the message from the interface.
+        // can be either fifo or urb. (depends on the template T).
+        return this->interface->get_next_delivered().lcob_m;
     }
 
     void init();  // init method, defined below.
@@ -108,7 +112,7 @@ void LocalCausalBroadcast<T>::init() {  // init method to spawn the thread that 
 template<typename T>
 void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob){
     while (true) {
-        lcob_message msg = lcob->get_next_delivered();
+        lcob_message msg = lcob->get_next_delivered(lcob->interface);
         // lcob->lcob_deliver(msg);   // up to now deliver immediately, as if we are doing fifo
         // first check if the message can be delivered immediately (vc is OK)
         bool can_deliver = true;
