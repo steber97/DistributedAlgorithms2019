@@ -19,7 +19,7 @@ number_of_dependencies=5
 
 python3 generate_membership_file.py $number_of_processes $number_of_dependencies
 
-make clean
+# make clean    # When doing last tests, it is better to clean before making (but for performance reasons now we don't clean)
 make
 
 #start 5 processes
