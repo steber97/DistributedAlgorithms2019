@@ -49,6 +49,7 @@ void UrBroadcast::urb_deliver(b_message &msg) {
     urb_delivering_queue_locked = false;
     cv_urb_delivering_queue.notify_all();
 
+    // Log the delivery of the message
     //urb_delivery_log(msg);
 }
 
@@ -136,13 +137,7 @@ b_message UrBroadcast::get_next_delivered() {
 void handle_beb_delivery(UrBroadcast *urb) {
     while (true) {
         // First retrieves the message from the queue.
-        unique_lock<mutex> lck(mtx_beb_urb);
-        cv_beb_urb.wait(lck, [&] { return !queue_beb_urb.empty(); });
-        queue_beb_urb_locked = true;
-        b_message msg = queue_beb_urb.front();
-        queue_beb_urb.pop();
-        queue_beb_urb_locked = false;
-        cv_beb_urb.notify_one();
+        b_message msg = urb->beb->get_next_beb_delivered();
 
         // Add the message to acked ones.
         urb->mtx_acks.lock();

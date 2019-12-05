@@ -42,7 +42,24 @@ void BeBroadcast::beb_deliver(b_message &msg) {
     queue_beb_urb.push(msg);
     queue_beb_urb_locked = false;
     cv_beb_urb.notify_one();
+
+    // log the delivery of the message
+    urb_delivery_log(msg);
 }
+
+
+b_message BeBroadcast::get_next_beb_delivered(){
+    unique_lock<mutex> lck(mtx_beb_urb);
+    cv_beb_urb.wait(lck, [&] { return !queue_beb_urb.empty(); });
+    queue_beb_urb_locked = true;
+    b_message msg = queue_beb_urb.front();
+    queue_beb_urb.pop();
+    queue_beb_urb_locked = false;
+    cv_beb_urb.notify_one();
+
+    return msg;
+}
+
 
 
 /**

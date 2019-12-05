@@ -19,6 +19,7 @@ public:
     void init();
     void beb_broadcast(b_message &msg);
     void beb_deliver(b_message &msg);
+    b_message get_next_beb_delivered();
 };
 
 void run_deliverer_beb(Link* link, BeBroadcast* beb_broadcast);
