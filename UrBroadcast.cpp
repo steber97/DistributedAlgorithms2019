@@ -136,7 +136,7 @@ b_message UrBroadcast::get_next_delivered() {
  */
 void handle_beb_delivery(UrBroadcast *urb) {
     while (true) {
-        // First retrieves the message from the queue.
+        // First retrieves the message from beb
         b_message msg = urb->beb->get_next_beb_delivered();
 
         // Add the message to acked ones.

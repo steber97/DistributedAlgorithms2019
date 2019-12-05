@@ -64,7 +64,9 @@ public:
 
         this->interface->broadcast(bMessage);  // either with FIFO or URB
     }
+
     void lcob_deliver(lcob_message &msg_to_deliver) {
+        // log the delivery of the message
         lcob_delivery_log(msg_to_deliver);
     }
 
@@ -116,6 +118,10 @@ void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob){
         // lcob->lcob_deliver(msg);   // up to now deliver immediately, as if we are doing fifo
         // first check if the message can be delivered immediately (vc is OK)
         bool can_deliver = true;
+
+        // check that the size of the vc are coherent
+        // assert(msg.vc.size() == lcob->local_vc.size());
+
         for (size_t i = 1; i<lcob->local_vc.size() && can_deliver; i++){
             // we start from 1
             if(lcob->local_vc[i] < msg.vc[i]){
@@ -124,14 +130,17 @@ void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob){
         }
 
         if (can_deliver){
+            //assert(msg.first_sender >= 1 and msg.first_sender < lcob->local_vc.size());
             lcob->local_vc[msg.first_sender] ++;
             lcob->lcob_deliver(msg);
 
 
             // When you finish dealing with the new message, check for older ones.
             bool at_least_one = true;
+
             while(at_least_one) {
                 at_least_one = false;
+                vector<lcob_message> messages_to_delete;
                 for (lcob_message m: lcob->pending) {
                     bool can_deliver = true;
                     for (size_t i = 1; i < lcob->local_vc.size() && can_deliver; i++) {
@@ -143,9 +152,13 @@ void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob){
                     if (can_deliver) {
                         at_least_one = true;
                         lcob->local_vc[m.first_sender]++;
-                        lcob->pending.erase(m);   // remove the message from pending
+                        //lcob->pending.erase(m);   // remove the message from pending
+                        messages_to_delete.push_back(m);
                         lcob_delivery_log(m);
                     }
+                }
+                for (lcob_message m: messages_to_delete){
+                    lcob->pending.erase(m);
                 }
             }
         }
