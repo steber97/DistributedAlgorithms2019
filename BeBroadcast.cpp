@@ -44,7 +44,7 @@ void BeBroadcast::beb_deliver(b_message &msg) {
     cv_beb_urb.notify_one();
 
     // log the delivery of the message
-    urb_delivery_log(msg);
+    // urb_delivery_log(msg);
 }
 
 
