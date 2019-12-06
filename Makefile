@@ -2,9 +2,11 @@ CFLAG = -g -O2 -pthread -fopenmp -Wall --std=c++11
 
 all: da_proc
 
-da_proc: da_proc.cpp  link.o utilities.o ur_broadcast.o be_broadcast.o fifo_broadcast.o lcob_broadcast.o
-	g++ $(CFLAG) -o da_proc da_proc.cpp utilities.o link.o ur_broadcast.o be_broadcast.o fifo_broadcast.o lcob_broadcast.o
+da_proc: da_proc.cpp  link.o utilities.o ur_broadcast.o be_broadcast.o fifo_broadcast.o lcob_broadcast.o graph.o
+	g++ $(CFLAG) -o da_proc da_proc.cpp utilities.o link.o ur_broadcast.o be_broadcast.o fifo_broadcast.o lcob_broadcast.o graph.o
 
+graph.o: graph.cpp graph.h
+	g++ $(CFLAG) -c -o graph.o graph.cpp
 
 lcob_broadcast.o: LocalCausalBroadcast.cpp LocalCausalBroadcast.h fifo_broadcast.o
 	g++ $(CFLAG) -c -o lcob_broadcast.o LocalCausalBroadcast.cpp

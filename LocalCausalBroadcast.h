@@ -28,6 +28,71 @@ struct LCOBComparator
 };
 
 template <typename T>   // T stands for FifoBroadcast or UrBroadcast
+class LocalCausalBroadcast;
+
+
+
+class Graph;
+
+class Node {
+private:
+    int id;  // this is the process. Probably useless. It is the position in the graph
+    bool received;
+    bool delivered;
+    int unmet_dependencies;
+    vector<Node*> is_dependency_of;
+    Graph* graph;
+    int seq_number;
+    int process;
+    lcob_message msg;
+    LocalCausalBroadcast<UrBroadcast>* lcob;
+
+/**
+ * Easily count the unmet dependencies
+ * @return
+ */
+    bool can_be_delivered();
+
+
+public:
+/**
+ * This method must build the node.
+ * Set received to True, delivered to False
+ * count the unmet dependencies (through the vector_clock)
+ * and set edges from its dependencies to itself.
+ * Careful, vector_clock can be empty/wrong (when received == false).
+ * @param id
+ * @param vector_clock
+ */
+    Node(bool received, vector<int> &vector_clock, Graph *graph, int proc, int seq_number,
+         vector<int>& local_vc, lcob_message msg, LocalCausalBroadcast<UrBroadcast>* lcob);
+
+/**
+ * Adds a dependency to the is_dependency_of vector.
+ * @param node
+ */
+    void add_dependency(Node* node);
+
+/**
+ * Deliver recursively: when the node can be delivered,
+ * it follows all is_dependency_of edges, and tries to deliver all
+ * nodes that were waiting for him.
+ * Set deliver to true
+ */
+    void deliver_recursively(vector<int>& vc);
+
+    void delete_one_dependency();
+
+    void update_existing_node(lcob_message& msg, vector<int>& local_vc);
+};
+
+class Graph{
+    // order process, message -> node
+public:
+    unordered_map<pair<int, int>, Node*, pair_hash> nodes;
+};
+
+template <typename T>   // T stands for FifoBroadcast or UrBroadcast
 class LocalCausalBroadcast {
 
 private:
@@ -38,6 +103,8 @@ public:
     vector<int> local_vc;
     unordered_set<lcob_message, LCOBHasher, LCOBComparator> pending;
     vector<vector<int>>* dependencies;
+    Graph* graph;
+
     int process_number;
     LocalCausalBroadcast<T>(int number_of_processes, int number_of_messages, T* interface, vector<vector<int>>* dependencies, const int process_number){
         this->number_of_processes = number_of_processes;
@@ -47,6 +114,7 @@ public:
         this->dependencies = dependencies;
         this->process_number = process_number;
         this->interface = interface;
+        this->graph = new Graph();
     }
 
     void lcob_broadcast(lcob_message &lcob_msg) {
@@ -117,57 +185,26 @@ void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob){
         lcob_message msg = lcob->get_next_delivered(lcob->interface);
         // lcob->lcob_deliver(msg);   // up to now deliver immediately, as if we are doing fifo
         // first check if the message can be delivered immediately (vc is OK)
-        bool can_deliver = true;
-
-        // check that the size of the vc are coherent
-        // assert(msg.vc.size() == lcob->local_vc.size());
-
-        for (size_t i = 1; i<lcob->local_vc.size() && can_deliver; i++){
-            // we start from 1
-            if(lcob->local_vc[i] < msg.vc[i]){
-                can_deliver = false;
-            }
-        }
-
-        if (can_deliver){
-            //assert(msg.first_sender >= 1 and msg.first_sender < lcob->local_vc.size());
-            lcob->local_vc[msg.first_sender] ++;
-            lcob->lcob_deliver(msg);
 
 
-            // When you finish dealing with the new message, check for older ones.
-            bool at_least_one = true;
-
-            while(at_least_one) {
-                at_least_one = false;
-                vector<lcob_message> messages_to_delete;
-                for (lcob_message m: lcob->pending) {
-                    bool can_deliver = true;
-                    for (size_t i = 1; i < lcob->local_vc.size() && can_deliver; i++) {
-                        // we start from 1
-                        if (lcob->local_vc[i] < m.vc[i]) {
-                            can_deliver = false;
-                        }
-                    }
-                    if (can_deliver) {
-                        at_least_one = true;
-                        lcob->local_vc[m.first_sender]++;
-                        //lcob->pending.erase(m);   // remove the message from pending
-                        messages_to_delete.push_back(m);
-                        lcob_delivery_log(m);
-                    }
-                }
-                for (lcob_message m: messages_to_delete){
-                    lcob->pending.erase(m);
-                }
-            }
+        // first check if the message already exists in the graph:
+        if (lcob->graph->nodes.find({msg.first_sender, msg.seq_number}) == lcob->graph->nodes.end()){
+            lcob->graph->nodes[{msg.first_sender, msg.seq_number}] = new Node(true, msg.vc,
+                    lcob->graph, msg.first_sender, msg.seq_number,
+                    lcob->local_vc, msg, lcob);
         }
         else{
-            // we can't do anything more! :/
-            lcob->pending.insert(msg);
+            // otherwise update the
+            lcob->graph->nodes[{msg.first_sender, msg.seq_number}]->update_existing_node(msg, lcob->local_vc);
         }
+
+
+        lcob->graph->nodes[{msg.first_sender, msg.seq_number}]->deliver_recursively(lcob->local_vc);
     }
 }
+
+
+
 
 
 #endif //DISTRIBUTED_ALGORITHMS_LOCALCAUSALBROADCAST_H

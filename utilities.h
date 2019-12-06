@@ -24,6 +24,16 @@ extern bool stop_pp2p_get_msg;
 
 bool check_concurrency_stop(mutex& mtx, bool& variable);
 
+
+// code freely adapted by https://stackoverflow.com/questions/15160889/how-can-i-make-an-unordered-set-of-pairs-of-integers-in-c
+struct pair_hash {
+    // only define the hash, as the equal operator is already defined in c++! :)
+    inline size_t operator()(const pair<int,int> & v) const {
+        return (v.first<<10) + v.second;
+    }
+};
+
+
 /**
  * This class is used to perform local causal order broadcast (therefore its name)
  * every message in lcob need to store a vector clock of dependencies.

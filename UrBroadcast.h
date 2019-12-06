@@ -9,14 +9,6 @@
 
 using namespace std;
 
-// code freely adapted by https://stackoverflow.com/questions/15160889/how-can-i-make-an-unordered-set-of-pairs-of-integers-in-c
-struct pair_hash {
-    // only define the hash, as the equal operator is already defined in c++! :)
-    inline size_t operator()(const pair<int,int> & v) const {
-        return (v.first<<10) + v.second;
-    }
-};
-
 
 class UrBroadcast {
 private:
