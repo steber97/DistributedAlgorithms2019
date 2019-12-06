@@ -64,7 +64,7 @@ public:
  * @param id
  * @param vector_clock
  */
-    Node(bool received, vector<int> &vector_clock, Graph *graph, int proc, int seq_number,
+    Node(bool received, Graph *graph, int proc, int seq_number,
          vector<int>& local_vc, lcob_message msg, LocalCausalBroadcast<UrBroadcast>* lcob);
 
 /**
@@ -189,7 +189,7 @@ void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob){
 
         // first check if the message already exists in the graph:
         if (lcob->graph->nodes.find({msg.first_sender, msg.seq_number}) == lcob->graph->nodes.end()){
-            lcob->graph->nodes[{msg.first_sender, msg.seq_number}] = new Node(true, msg.vc,
+            lcob->graph->nodes[{msg.first_sender, msg.seq_number}] = new Node(true,
                     lcob->graph, msg.first_sender, msg.seq_number,
                     lcob->local_vc, msg, lcob);
         }

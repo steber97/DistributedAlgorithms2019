@@ -13,7 +13,7 @@ bool Node::can_be_delivered() {
 /**
  * Create an instance of Node.
  */
-Node::Node(bool received, vector<int> &vector_clock, Graph *graph, int proc, int seq_number,
+Node::Node(bool received, Graph *graph, int proc, int seq_number,
            vector<int>& local_vc, lcob_message msg, LocalCausalBroadcast<UrBroadcast>* lcob) {
     this->process = proc;
     this->seq_number = seq_number;
@@ -26,18 +26,18 @@ Node::Node(bool received, vector<int> &vector_clock, Graph *graph, int proc, int
 
     if (received == true){
         this->msg = msg;    // the message is true only when creating it after having received the message
-        for (size_t i = 1; i<vector_clock.size(); i++){   // the vector clock is longer by 1
-            if (vector_clock[i] > local_vc[i]){  // i is the process number, vector_clock[i] the sequence number
+        for (size_t i = 1; i<msg.vc.size(); i++){   // the vector clock is longer by 1
+            if (msg.vc[i] > local_vc[i]){  // i is the process number, vector_clock[i] the sequence number
                 // we have a dependency
-                if (graph->nodes.find({i, vector_clock[i]}) == graph->nodes.end() ){
+                if (graph->nodes.find({i, msg.vc[i]}) == graph->nodes.end() ){
                     // we need to insert a new node
                     // CAREFUL HERE: vector_clock is not right! should be read only when received == true;
                     // the same for lcob_message
-                    graph->nodes[{i, vector_clock[i]}] = new Node(false, vector_clock, graph, i, vector_clock[i],
+                    graph->nodes[{i, msg.vc[i]}] = new Node(false, graph, i, msg.vc[i],
                                                                   this->lcob->local_vc, this->msg, this->lcob);
                 }
                 // Add the dependency
-                graph->nodes[{i, vector_clock[i]}]->add_dependency(this);
+                graph->nodes[{i, msg.vc[i]}]->add_dependency(this);
                 unmet_dependencies ++;   // one more unmet dependency
             }
         }
@@ -98,7 +98,7 @@ void Node::update_existing_node(lcob_message& msg, vector<int>& local_vc) {
                 // we need to insert a new node
                 // CAREFUL HERE: vector_clock is not right! should be read only when received == true;
                 // the same for lcob_message
-                graph->nodes[{i, msg.vc[i]}] = new Node(false, msg.vc, graph, i, msg.vc[i],
+                graph->nodes[{i, msg.vc[i]}] = new Node(false, graph, i, msg.vc[i],
                                                               this->lcob->local_vc, this->msg, this->lcob);
             }
             // Add the dependency
