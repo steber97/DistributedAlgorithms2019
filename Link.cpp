@@ -1,7 +1,5 @@
+#include <bitset>
 #include "Link.h"
-
-int num_of_processes;
-int window_size = 1;
 
 //to handle concurrency on the incoming_messages queue between the manager of the link and the receiver
 bool incoming_messages_locked = false;
@@ -9,7 +7,7 @@ mutex mtx_incoming_messages, mtx_acks;
 condition_variable cv_incoming_messages;
 queue<pp2p_message> incoming_messages;
 
-vector<mutex> mtx_messages_to_send_by_process(100);
+vector<mutex> mtx_messages_to_send_by_process(MAX_NUMBER_OF_PROCESSES);
 vector<queue<pp2p_message>> messages_to_send_by_process;
 
 mutex mtx_outgoing_messages;
@@ -27,11 +25,14 @@ Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>>
     this->socket_by_process_id = socket_by_process_id;
     this->last_seq_number.resize(this->socket_by_process_id->size() + 1, 0LL);  // Initialize all sequence numbers to zero.
 
-    num_of_processes = socket_by_process_id->size();
-
     for (unsigned i = 0; i < socket_by_process_id->size(); i++) {
         queue<pp2p_message> q;
         messages_to_send_by_process.push_back(q);
+        state.push_back(SLOW_START);
+        congestion_window_size.push_back(1);
+        ssthresh.push_back(512);
+        duplicate_ack_count.push_back(0);
+        congestion_avoidance_augment.push_back(0);
     }
 }
 
@@ -42,10 +43,10 @@ Link::Link(int sockfd, int process_number, unordered_map<int, pair<string, int>>
 void Link::init() {
     thread t_rec(run_receiver, this);
     thread t_send(run_sender, this->socket_by_process_id, this->sockfd);
-    thread t_mod(run_moderator);
+    //thread t_mod(run_moderator);
     t_rec.detach();
     t_send.detach();
-    t_mod.detach();
+    //t_mod.detach();
 }
 
 
@@ -115,7 +116,6 @@ void Link::send_ack(pp2p_message &msg) {
  * @return the next new message.
  */
 pp2p_message Link::get_next_message(){
-    // TODO: Check this while loop
     while(true){
         unique_lock<mutex> lck(mtx_incoming_messages);
         cv_incoming_messages.wait(lck, [&] { return !incoming_messages.empty(); });
@@ -128,18 +128,20 @@ pp2p_message Link::get_next_message(){
         cout << "get next message" << endl;
 #endif
         if (msg.ack) {
-            // we received an ack;
-            // cout << "Received ack :) " << msg.proc_number << " " << msg.seq_number << endl;
             mtx_acks.lock();
-            acks[msg.proc_number].insert(msg.seq_number);
+            bool duplicate = !((acks[msg.proc_number].insert(msg.seq_number)).second);
             mtx_acks.unlock();
+
+            if (duplicate)
+                on_duplicate_ack(msg.proc_number);
+            else
+                on_new_ack(msg.proc_number);
+
         } else {
             this->send_ack(msg);
             // Check if it has not been delivered already
-            if (pl_delivered[msg.proc_number].find(msg.seq_number) == pl_delivered[msg.proc_number].end()) {
-                pl_delivered[msg.proc_number].insert(msg.seq_number);
+            if (pl_delivered[msg.proc_number].insert(msg.seq_number).second)
                 return msg;
-            }
         }
         mtx_pp2p_get_msg.lock();
         if (stop_pp2p_get_msg){
@@ -154,26 +156,126 @@ pp2p_message Link::get_next_message(){
 }
 
 
+void Link::on_new_ack(int proc_num) {
+    int messages_to_send = 0;
+    if(get_state(proc_num) == SLOW_START) {
+        messages_to_send = increase_congestion_window_size(proc_num, SLOW_START);
+        if (get_congestion_window_size(proc_num) >= get_ssthresh(proc_num))
+            set_state(proc_num, CONGESTION_AVOIDANCE);
+    } else if (get_state(proc_num) == CONGESTION_AVOIDANCE) {
+        messages_to_send = increase_congestion_window_size(proc_num, CONGESTION_AVOIDANCE);
+    } else if (get_state(proc_num) == FAST_RECOVERY) {
+        messages_to_send = set_congestion_window_size(proc_num, get_ssthresh(proc_num));
+        set_state(proc_num, CONGESTION_AVOIDANCE);
+    }
+    reset_duplicate_ack_count(proc_num);
+    enqueue_messages(proc_num, messages_to_send);
+}
+
+
+void Link::on_duplicate_ack(int proc_num) {
+    int messages_to_send = 0;
+    int s = get_state(proc_num);
+    if (s == SLOW_START || s == CONGESTION_AVOIDANCE) {
+        increase_duplicate_ack_count(proc_num);
+        if (get_duplicate_ack_count(proc_num) == 3) {
+            set_state(proc_num, FAST_RECOVERY);
+            set_ssthresh(proc_num, get_congestion_window_size(proc_num) / 2);
+            messages_to_send = set_congestion_window_size(proc_num, get_ssthresh(proc_num) + 3);
+        } else if (get_state(proc_num) == FAST_RECOVERY) {
+            messages_to_send = increase_congestion_window_size(proc_num, SLOW_START);
+        }
+    }
+    enqueue_messages(proc_num, messages_to_send);
+}
+
+
+void Link::on_timeout(int proc_num) {
+    set_ssthresh(proc_num, get_congestion_window_size(proc_num) / 2);
+    set_congestion_window_size(proc_num, 1);
+    reset_duplicate_ack_count(proc_num);
+    set_state(proc_num, SLOW_START);
+}
+
+
+void Link::enqueue_messages(int proc_num, int number_of_messages) {
+    vector<pp2p_message> messages_to_send;
+    int count = number_of_messages;
+
+    mtx_messages_to_send_by_process[proc_num - 1].lock();
+    while (!messages_to_send_by_process[proc_num].empty() || count != 0) {
+        pp2p_message msg = messages_to_send_by_process[proc_num - 1].front();
+        messages_to_send.push_back(msg);
+        messages_to_send_by_process[proc_num - 1].pop();
+        count--;
+    }
+    mtx_messages_to_send_by_process[proc_num].unlock();
+
+    mtx_outgoing_messages.lock();
+    for (int i=0; i<number_of_messages; i++) {
+        outgoing_messages.push({proc_num, messages_to_send[i]});
+    }
+    mtx_outgoing_messages.unlock();
+}
+
+
 /**
  * Method run by the thread sender, it dequeues outgoing messages and then sends
  *
  * @param socket_by_process_id  data structure that maps every process (number) to its (ip, port) pair
  * @param sockfd the socket fd of the link's owner process
  */
-void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int sockfd) {
+void run_sender(unordered_map<int, pair<string, int>> *socket_by_process_id, int sockfd) {
     struct sockaddr_in d_addr;
     while (true) {
+        //int curr_dest;
+        //vector<pair<int,pp2p_message>> window(0);
+
         mtx_outgoing_messages.lock();
         if (!outgoing_messages.empty()) {
             pair<int, pp2p_message> dest_and_msg = outgoing_messages.front();
             outgoing_messages.pop();
+            /*
+            curr_dest = dest_and_msg.first;
+
+            while(!outgoing_messages.empty() || curr_dest != dest_and_msg.first) {
+                // until I get an ack or a message to send to a process different
+                // from the curr_dest I keep putting messages into my window
+                window.push_back(dest_and_msg);
+                outgoing_messages.pop();
+                dest_and_msg = outgoing_messages.front();
+            }
+             */
+
             mtx_outgoing_messages.unlock();
+
+            /*
+            for (int i = 0; i < window.size(); i++) {
+                string msg_s = to_string(window[i].second);
+                const char *msg_c = msg_s.c_str();
+
+                memset(&d_addr, 0, sizeof(d_addr));
+                d_addr.sin_family = AF_INET;
+                d_addr.sin_port = (*socket_by_process_id)[dest_and_msg.first].second;
+                string ip_address = (*socket_by_process_id)[dest_and_msg.first].first;
+                // wrong line here
+                inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
+
+                sendto(sockfd, msg_c, strlen(msg_c),
+                       MSG_CONFIRM, (const struct sockaddr *) &d_addr,
+                       sizeof(d_addr));
+            }
+
+            update_time(curr_dest);
+
+             */
 
             mtx_acks.lock();
             if (acks[dest_and_msg.first].find(dest_and_msg.second.seq_number) == acks[dest_and_msg.first].end()) {
                 // Send only if the ack hasn't been received
                 mtx_acks.unlock();
                 string msg_s = to_string(dest_and_msg.second);
+                //TODO aggiungere timestamp
                 const char *msg_c = msg_s.c_str();
 
                 memset(&d_addr, 0, sizeof(d_addr));
@@ -190,6 +292,7 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
                 cout << "Sent " << msg_c << " to " << dest_and_msg.first << endl;
 #endif
                 if (!dest_and_msg.second.ack) {
+                    //TODO aggiungere con priorità
                     mtx_messages_to_send_by_process[dest_and_msg.first - 1].lock();
                     messages_to_send_by_process[dest_and_msg.first - 1].push(dest_and_msg.second);
                     mtx_messages_to_send_by_process[dest_and_msg.first - 1].unlock();
@@ -198,16 +301,17 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
                 mtx_acks.unlock();
             }
 
-            // wait a bit before sending the new message.
-            usleep(10);
-            mtx_pp2p_sender.lock();
-            if (stop_pp2p_sender) {
-                mtx_pp2p_sender.unlock();
-                break;
-            }
-            mtx_pp2p_sender.unlock();
         } else
             mtx_outgoing_messages.unlock();
+
+        // wait a bit before sending the new message.
+        // usleep(10);
+        mtx_pp2p_sender.lock();
+        if (stop_pp2p_sender) {
+            mtx_pp2p_sender.unlock();
+            break;
+        }
+        mtx_pp2p_sender.unlock();
     }
 }
 
@@ -228,9 +332,11 @@ void run_receiver(Link *link) {
         buf[n] = '\0';
 
         pp2p_message msg = parse_message(string(buf));
+
 #ifdef DEBUG
         cout << "\nNew message " << msg.proc_number << " " << msg.seq_number << endl;
 #endif
+
         // Put the message in the queue.
         unique_lock<mutex> lck(mtx_incoming_messages);
         cv_incoming_messages.wait(lck, [&] { return !incoming_messages_locked; });
@@ -249,7 +355,7 @@ void run_receiver(Link *link) {
     }
 }
 
-
+/*
 void run_moderator() {
     int pn = 0;
 
@@ -271,3 +377,5 @@ void run_moderator() {
             pn = 0;
     }
 }
+ */
+

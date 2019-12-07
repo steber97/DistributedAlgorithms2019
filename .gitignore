@@ -4,7 +4,8 @@ da_proc
 a.out
 output
 cmake-build-debug
-da_proc_1.out
-membership
 membership_py
 da_proc_*.out
+membership
+test_performance.sh
+PASS
