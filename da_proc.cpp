@@ -9,7 +9,7 @@
 #include "UrBroadcast.h"
 #include "BeBroadcast.h"
 #include "FifoBroadcast.h"
-#include "LocalCausalBroadcast.cpp"
+#include "LocalCausalBroadcast.h"
 
 using namespace std;
 
