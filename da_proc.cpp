@@ -9,7 +9,7 @@
 #include "UrBroadcast.h"
 #include "BeBroadcast.h"
 #include "FifoBroadcast.h"
-#include "LocalCausalBroadcast.h"
+#include "LocalCausalBroadcast.cpp"
 
 using namespace std;
 
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
     Link* link = new Link(sockfd, process_number, input_data, number_of_processes);
     BeBroadcast* beb = new BeBroadcast(link, number_of_processes, number_of_messages);
     UrBroadcast* urb = new UrBroadcast(beb, number_of_processes, number_of_messages);
-    //FifoBroadcast* fb = new FifoBroadcast(urb, number_of_processes);
+    // FifoBroadcast* fb = new FifoBroadcast(urb, number_of_processes);
     LocalCausalBroadcast<UrBroadcast>* lcob = new LocalCausalBroadcast<UrBroadcast>(number_of_processes,
             number_of_messages, urb, dependencies, process_number);
 
