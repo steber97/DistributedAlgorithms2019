@@ -151,15 +151,23 @@ then it is delivered. The process is repeated until no more process can be
 delivered.
 
 In order to speed up the search for messages that can be delivered, we 
-implemented a graph data structure which allows faster look up for messages
+implemented a graph data structure which allows faster lookup for messages
 that can be delivered: the graph stores one node for every message received.
 Every time we receive a new message *m1*, we add one edge from each message 
 *mi* that is a dependency for *m1* to *m1* itself. A counter `unmet_dependencies`
 stores the number of dependencies that the message is waiting for in order
-to be able to being delivered.
+to be able to be delivered. 
 
 Every time we deliver a message *m2*, we follow all the edges starting from
-*m2*, and subtract 1 from the `unmet_dependencies` counter of every other node.
+*m2*, and subtract 1 to the `unmet_dependencies` counter of every neighbour node.
+Whenever any of the neighbour can be delivered (`unmet_dependencies == 0`) then
+recursively we can deliver it too.
+
+In this way, instead of keeping a long list of pending messages that has to be iterated
+over every time we receive a new message *m1*, we only inspect the messages that are 
+influenced by the delivery of *m1*. The memory consumption is *O(m * p)*, where *m*
+ is the number of messages and *p* the number of processes, as every node represents 
+ a message, and from every node there are at most p outgoing edges.
 
   
 
