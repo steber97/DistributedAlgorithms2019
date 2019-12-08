@@ -29,7 +29,7 @@ bool check_concurrency_stop(mutex& mtx, bool& variable);
 struct pair_hash {
     // only define the hash, as the equal operator is already defined in c++! :)
     inline size_t operator()(const pair<int,int> & v) const {
-        return (v.first<<10) + v.second;
+        return (v.first<<20) + v.second;
     }
 };
 
@@ -61,7 +61,7 @@ struct lcob_message {
         }
     }
 
-    lcob_message(){
+    lcob_message(){  // don't know really why I can't remove it!
     }
 };
 
@@ -85,7 +85,8 @@ struct b_message  {
     lcob_message lcob_m;
 
     b_message(){
-        // Shouldn't be called, but still it needs to be here (I think when initializing the variable when passing parameter to a function)
+        // Shouldn't be called, but still it needs to be here (I think when initializing
+        // the variable when passing parameter to a function)
     }
 
     b_message(int seq_number, int first_sender, lcob_message& lcob_m){
@@ -100,7 +101,8 @@ struct b_message  {
 /**
  * This is the message structure at link level.
  *
- * proc_number is always the sender of the message, not the receiver! In addition it is the process who actually sent
+ * proc_number is always the sender of the message, not the receiver!
+ * In addition it is the process who actually sent
  * the message, not the one who initially sent it in broadcast.
  *
  */
@@ -127,7 +129,19 @@ struct pp2p_message  {
 
 };
 
+
+/**
+ * Checks whether the message is fake! A bit dirty,
+ * we deliver fake messages when we close the connection and bad things happen!
+ * @return
+ */
 bool is_pp2p_fake(pp2p_message);
+
+
+/**
+ * Create a fake pp2p message, use only when closing the connection, in order to
+ * stop even higher layers.
+ */
 pp2p_message create_fake_pp2p(const int number_of_processes);
 
 
@@ -141,29 +155,76 @@ vector<string>* split(const string& s, char c);
 
 
 /**
- * @param msg is a string formatted like A-ID-SN where:
+ * @param msg is a string formatted like A-ID-SN/SENB-SNB/vc1,vc2,vc3 where:
+ *        / separate pp2p message, broadcast messages and lcob messages.
  *        - A represents the ack
  *        - ID is the process number of sender
  *        - SN is the sequence number of the message
- *        All information must be separated with the character '-'.
- *        An example of message is 1-10-42 which means ack for message 42, sent by process 10
+ *
+ *        - SENB is the sender at the broadcast level
+ *        - SNB is the sequence number at the broadcast level
+ *
+ *        - vc1, ... is the vector clock, comma separated
+ *
+ *        All information must be separated with the character '/', '-' or ','.
+ *        An example of message is 1-10-42/2-26/1,3,4 which means ack for message 42, sent by process 10,
+ *        at the broadcast level message 26 sent originally by process 2, with a vector clock 1,3,4
  * @return a struct of type message
  */
 pp2p_message parse_message(const string &msg);
 
-pair<unordered_map<int, pair<string, int>> *, vector<vector<int>>*> parse_input_data(string &membership_file);
-
-string to_string(pp2p_message &msg);
 
 /**
- * These functions handle the logging of the output
+ * Parses the input file
+ * @param membership_file the file to parse
+ * @return a pair of:
+ *          - a map which maps to each process number its address and port
+ *          - a matrix of dependencies (indexed by process)
  */
-void urb_broadcast_log(b_message& msg);
-void urb_delivery_log(b_message& msg);
+pair<unordered_map<int, pair<string, int>> *, vector<vector<int>>*> parse_input_data(string &membership_file);
 
 
-void lcob_broadcast_log(lcob_message& msg);
-void lcob_delivery_log(lcob_message& msg);
+/**
+ * returns a string of the format:
+ * 0-1-3/5-6/0,4,2,1
+ * the first part (before /) is the perfect link message
+ * the second is the uniform broadcast part
+ * the third is the vector clock
+ * ack - process - seq_number (its long long) / original_sender - sequence_number (without whitespaces) / vector clock as comma separated list
+ * @param msg
+ * @return
+ */
+string to_string(pp2p_message &msg);
+
+
+
+/**
+ * Appends the broadcast log to the list of activities.
+ * @param msg the broadcast message to log
+ */
+template <typename T>
+void broadcast_log(T& msg) {
+    string log_msg = "b " + to_string(msg.seq_number) ;
+    mtx_log.lock();
+    // Append the broadcast log message
+    log_actions.push_back(log_msg);
+    mtx_log.unlock();
+}
+
+
+/**
+ * Appends the broadcast delivery to the list of activities.
+ * @param msg
+ * @param sender
+ * @return
+ */
+template <typename T>
+void delivery_log(T& msg) {
+    string log_msg = "d " + to_string(msg.first_sender) + " " + to_string(msg.seq_number);
+    mtx_log.lock();
+    log_actions.push_back(log_msg);
+    mtx_log.unlock();
+}
 
 
 /**

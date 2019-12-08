@@ -2,11 +2,6 @@
 #include "LocalCausalBroadcast.h"
 
 
-
-
-
-
-
 /**
  * This is used to build lcob on top of fifo
  * @param lcob
@@ -238,7 +233,7 @@ void LocalCausalBroadcast<T>::lcob_broadcast(lcob_message &lcob_msg) {
     vc[dependencies->at(this->process_number)[0]] = lcob_msg.seq_number - 1;   // set the dependency on the previous message of the same sender (FIFO property).
     lcob_msg.vc = vc;
     b_message bMessage(lcob_msg.seq_number, lcob_msg.first_sender, lcob_msg);
-    lcob_broadcast_log(lcob_msg);
+    broadcast_log<lcob_message>(lcob_msg);
 
     this->interface->broadcast(bMessage);  // either with FIFO or URB
 }
@@ -252,7 +247,7 @@ void LocalCausalBroadcast<T>::lcob_broadcast(lcob_message &lcob_msg) {
 template<typename T>
 void LocalCausalBroadcast<T>::lcob_deliver(lcob_message &msg_to_deliver) {
     // log the delivery of the message
-    lcob_delivery_log(msg_to_deliver);
+    delivery_log<lcob_message>(msg_to_deliver);
 }
 
 

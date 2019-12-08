@@ -20,8 +20,8 @@ bool stop_pp2p_receiver = false, stop_pp2p_sender = false, stop_pp2p_get_msg = f
  * Parses the input file
  * @param membership_file the file to parse
  * @return a pair of:
- *          - the total number of message to be sent by each process
- *          - a map that contains info on ip and port for each process
+ *          - a map which maps to each process number its address and port
+ *          - a matrix of dependencies (indexed by process)
  */
 pair<unordered_map<int, pair<string, int>> *, vector<vector<int>>*> parse_input_data(string &membership_file) {
     unordered_map<int, pair<string, int>> *socket_by_process_id = new(unordered_map<int, pair<string, int>>);
@@ -55,14 +55,19 @@ pair<unordered_map<int, pair<string, int>> *, vector<vector<int>>*> parse_input_
 
 
 /**
- * A fake message is a message with a sequence number equal to -1
- * @param msg
+ * Checks whether the message is fake! A bit dirty,
+ * we deliver fake messages when we close the connection and bad things happen!
  * @return
  */
 bool is_pp2p_fake(pp2p_message msg){
     return msg.seq_number == -1;
 }
 
+
+/**
+ * Create a fake pp2p message, use only when closing the connection, in order to
+ * stop even higher layers.
+ */
 pp2p_message create_fake_pp2p(const int number_of_processes){
 
     vector<int> fake_vc(number_of_processes, INT32_MAX);   // Initialize it with stupid big numbers, so that it is not delivered as vc is too big!
@@ -190,56 +195,4 @@ string to_string(pp2p_message &msg){
     return (msg.ack ? string("1") : string("0")) + "-" + to_string(msg.proc_number) + "-" + to_string(msg.seq_number)   /* this is the pp2p message */
                 + "/" + to_string(msg.payload.first_sender) + "-" + to_string(msg.payload.seq_number)       /* this is the broadcast msg */
                 + "/" + vc_string;        // this is the vector clock
-}
-
-
-/**
- * Appends the broadcast log to the list of activities.
- * @param msg the broadcast message to log
- */
-void urb_broadcast_log(b_message& msg) {
-    string log_msg = "b " + to_string(msg.seq_number) ;
-    mtx_log.lock();
-    // Append the broadcast log message
-    log_actions.push_back(log_msg);
-    mtx_log.unlock();
-}
-
-
-/**
- * Appends the broadcast delivery to the list of activities.
- * @param msg
- * @param sender
- * @return
- */
-void urb_delivery_log(b_message& msg) {
-    string log_msg = "d " + to_string(msg.first_sender) + " " + to_string(msg.seq_number);
-    mtx_log.lock();
-    log_actions.push_back(log_msg);
-    mtx_log.unlock();
-}
-
-/**
- * Appends the broadcast log to the list of activities.
- * @param msg the broadcast message to log
- */
-void lcob_broadcast_log(lcob_message& msg){
-    string log_msg = "b " + to_string(msg.seq_number) ;
-    mtx_log.lock();
-    // Append the broadcast log message
-    log_actions.push_back(log_msg);
-    mtx_log.unlock();
-}
-
-/**
- * Appends the broadcast delivery to the list of activities.
- * @param msg
- * @param sender
- * @return
- */
-void lcob_delivery_log(lcob_message& msg){
-    string log_msg = "d " + to_string(msg.first_sender) + " " + to_string(msg.seq_number);
-    mtx_log.lock();
-    log_actions.push_back(log_msg);
-    mtx_log.unlock();
 }
