@@ -14,7 +14,7 @@ UrBroadcast::UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_o
 
 
 /**
- * This method initializes a thread that handle messages delivered at beb level
+ * This method detaches a new thread which will listen to incoming beb delivered messages.
  */
 void UrBroadcast::init() {
     thread delivery_checker(handle_beb_delivery, this);
@@ -22,8 +22,9 @@ void UrBroadcast::init() {
 }
 
 /**
- * The actual method that broadcasts messages at urb level
- *
+ * broadcast the message to all processes.
+ * Before doing so, it needs to store the message in the forwarded set.
+ * Otherwise, it could risk to broadcast it more than once.
  * @param msg
  */
 void UrBroadcast::urb_broadcast(b_message &msg)  {
@@ -37,8 +38,7 @@ void UrBroadcast::urb_broadcast(b_message &msg)  {
 
 
 /**
- * Method used to when a message has to be delivered at urb level,
- * this is pushed into a queue that contains all the delivered messages at urb level
+ * Delivers the message putting it in the queue of urb delivered messages.
  * @param msg
  */
 void UrBroadcast::urb_deliver(b_message &msg) {
@@ -55,10 +55,10 @@ void UrBroadcast::urb_deliver(b_message &msg) {
 
 
 /**
- * Gets the next message delivered by urb, by popping it from the queue
- * It's used by the fifo level to get the messages delivered at the inferior level
- *
- * @return the head of urb_delivering_queue
+ * Returns the next message that has been urb delivered, reading from
+ * the queue urb_delivering_queue (it is the reader method, the writer instead is
+ * handle_beb_delivery).
+ * @return the first (fifo order, it is a queue) urb delivered message
  */
 b_message UrBroadcast::get_next_urb_delivered() {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
@@ -73,10 +73,10 @@ b_message UrBroadcast::get_next_urb_delivered() {
 
 
 /**
- * Checks whether a message has been delivered or not
- *
- * @return true if delivered
- *         false otherwise
+ * Check whether the message has already been delivered, looking in the set
+ * delivered. Otherwise, it could happen that any message is delivered more than once.
+ * @param msg
+ * @return
  */
 bool UrBroadcast::is_delivered(b_message &msg) {
     this->mtx_delivered.lock();
@@ -102,7 +102,7 @@ int UrBroadcast::acks_received(b_message &msg) {
 
 /**
  * Adds a message to the set of the delivered messages
- *
+ * It manages automatically the concurrency
  * @param msg message to add to the set
  */
 void UrBroadcast::addDelivered(b_message &msg) {
@@ -116,12 +116,22 @@ int UrBroadcast::get_number_of_processes() {
     return number_of_processes;
 }
 
+
+/**
+ * just an alias for urb_broadcast so that it can be used with templates
+ * @param msg
+ */
 void UrBroadcast::broadcast(b_message &msg) {
     // This is just a wrapper for the ur_broadcast, so that it can be
     // invoked by lcob_broadcast.
     this->urb_broadcast(msg);
 }
 
+
+/**
+ * Just an alias for get_next_urb_delivered, so that it can be used with templates.
+ * @return get_next_urb_delivered()
+ */
 b_message UrBroadcast::get_next_delivered() {
     // just a wrapper with the same name as in fifo, so that can be used as template in Local Causal Reliable Broadcast.
     return this->get_next_urb_delivered();
@@ -129,8 +139,13 @@ b_message UrBroadcast::get_next_delivered() {
 
 
 /**
- * This method gets messages from the shared queue between BEB and URB and handle them
- * It is the way URB can interact with BEB.
+ * Gets beb delivered messages and decides if it is the case to urb_deliver them.
+ * A message which has been beb_delivered can't immediately be urb_delivered: in fact
+ * the first time a new message arrives it needs to be forwarded to all other processes.
+ * Moreover, we store how many times we see the same message repeated (as every process
+ * forwards every message, there are going to be possibly n copies of the same message
+ * going around, where n is the number of processes).
+ * As soon as we have received n/2 + 1 acks, it means that we can urb_deliver it.
  *
  * @param urb
  */
