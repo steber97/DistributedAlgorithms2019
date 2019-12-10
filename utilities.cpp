@@ -14,8 +14,8 @@ condition_variable cv_beb_urb;
 
 
 mutex mtx_pp2p_sender, mtx_pp2p_get_msg;
-atomic<bool> stop_pp2p_receiver(false);
-bool stop_pp2p_sender = false, stop_pp2p_get_msg = false;
+atomic<bool> stop_pp2p(false);
+bool stop_pp2p_get_msg = false;
 
 /**
  * Parses the input file

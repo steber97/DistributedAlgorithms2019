@@ -188,13 +188,11 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
         }
         // wait a bit before sending the new message.
         usleep(10);
-        mtx_pp2p_sender.lock();
-        if (stop_pp2p_sender){
-            mtx_pp2p_sender.unlock();
+        if (stop_pp2p){   // stop_pp2p is atomic, no need to manage concurrency
             break;
         }
-        mtx_pp2p_sender.unlock();
     }
+    cout << "exit from sender" << endl;
 }
 
 
@@ -212,7 +210,7 @@ void run_receiver(Link *link) {
         int n = recvfrom(link->get_sockfd(), (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
                          &len);
 
-        if (stop_pp2p_receiver){  // stop_pp2p_receiver is atomic, shouldn't need a mutex anymore
+        if (stop_pp2p){  // stop_pp2p_receiver is atomic, shouldn't need a mutex anymore
             break;
         }
 

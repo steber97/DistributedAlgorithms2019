@@ -31,14 +31,9 @@ static void stop(int signum) {
 
 	// Stop delivering and sending message at the pp2p layer!
 
-    stop_pp2p_receiver = true;
+    stop_pp2p = true;
 
     shutdown(sockfd, SHUT_RDWR);
-
-    mtx_pp2p_sender.lock();
-    stop_pp2p_sender = true;
-    mtx_pp2p_sender.unlock();
-
 
     mtx_pp2p_get_msg.lock();
     stop_pp2p_get_msg = true;
