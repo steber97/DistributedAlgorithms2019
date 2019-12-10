@@ -127,12 +127,9 @@ pp2p_message Link::get_next_message(){
                 return msg;
             }
         }
-        mtx_pp2p_get_msg.lock();
-        if (stop_pp2p_get_msg){
-            mtx_pp2p_get_msg.unlock();
+        if (stop_pp2p) { // stop_pp2p is atomic, no need to manage concurrency.
             break;
         }
-        mtx_pp2p_get_msg.unlock();
     }
     // This happens only when the process is killed, no harm can be done!
     pp2p_message fake = create_fake_pp2p(this->number_of_processes);
@@ -192,7 +189,6 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
             break;
         }
     }
-    cout << "exit from sender" << endl;
 }
 
 

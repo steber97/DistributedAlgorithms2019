@@ -18,9 +18,7 @@ using namespace std;
 extern mutex mtx_log;
 extern vector<string> log_actions;
 
-extern mutex mtx_pp2p_sender, mtx_pp2p_get_msg;
 extern atomic<bool> stop_pp2p;
-extern bool stop_pp2p_get_msg;
 
 bool check_concurrency_stop(mutex& mtx, bool& variable);
 

@@ -12,10 +12,7 @@ queue<b_message> queue_beb_urb;
 bool queue_beb_urb_locked = false;
 condition_variable cv_beb_urb;
 
-
-mutex mtx_pp2p_sender, mtx_pp2p_get_msg;
 atomic<bool> stop_pp2p(false);
-bool stop_pp2p_get_msg = false;
 
 /**
  * Parses the input file

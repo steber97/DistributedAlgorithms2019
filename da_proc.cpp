@@ -32,12 +32,9 @@ static void stop(int signum) {
 	// Stop delivering and sending message at the pp2p layer!
 
     stop_pp2p = true;
+    cv_receiver.notify_all();
 
     shutdown(sockfd, SHUT_RDWR);
-
-    mtx_pp2p_get_msg.lock();
-    stop_pp2p_get_msg = true;
-    mtx_pp2p_get_msg.unlock();
 
     sleep(2);   // wait for sender and receiver to stop, so that after the below writing no message is received or sent.
 
