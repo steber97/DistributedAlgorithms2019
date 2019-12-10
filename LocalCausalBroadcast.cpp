@@ -230,7 +230,7 @@ void LocalCausalBroadcast<T>::lcob_broadcast(lcob_message &lcob_msg) {
         // set to values != 0 only the processes we depend on.
         vc[dependencies->at(this->process_number)[i]] = this->local_vc[dependencies->at(this->process_number)[i]];
     }
-    vc[dependencies->at(this->process_number)[0]] = lcob_msg.seq_number - 1;   // set the dependency on the previous message of the same sender (FIFO property).
+    vc[this->process_number] = lcob_msg.seq_number - 1;   // set the dependency on the previous message of the same sender (FIFO property).
     lcob_msg.vc = vc;
     b_message bMessage(lcob_msg.seq_number, lcob_msg.first_sender, lcob_msg);
     broadcast_log<lcob_message>(lcob_msg);
