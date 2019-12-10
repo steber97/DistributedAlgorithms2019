@@ -10,6 +10,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <queue>
+#include <atomic>
 #include <assert.h>
 
 using namespace std;
@@ -17,8 +18,8 @@ using namespace std;
 extern mutex mtx_log;
 extern vector<string> log_actions;
 
-extern mutex mtx_pp2p_receiver, mtx_pp2p_sender, mtx_pp2p_get_msg;
-extern bool stop_pp2p_receiver;
+extern mutex mtx_pp2p_sender, mtx_pp2p_get_msg;
+extern atomic<bool> stop_pp2p_receiver;
 extern bool stop_pp2p_sender;
 extern bool stop_pp2p_get_msg;
 

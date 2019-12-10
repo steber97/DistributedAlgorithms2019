@@ -211,6 +211,11 @@ void run_receiver(Link *link) {
         struct sockaddr_in sender_addr;
         int n = recvfrom(link->get_sockfd(), (char *)buf, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &sender_addr,
                          &len);
+
+        if (stop_pp2p_receiver){  // stop_pp2p_receiver is atomic, shouldn't need a mutex anymore
+            break;
+        }
+
         buf[n] = '\0';
 
         pp2p_message msg = parse_message(string(buf));
@@ -224,13 +229,5 @@ void run_receiver(Link *link) {
         incoming_messages.push(msg);
         queue_locked = false;
         cv_receiver.notify_one();
-
-        // stop in case da_proc received a sigterm!
-        mtx_pp2p_receiver.lock();
-        if (stop_pp2p_receiver){
-            mtx_pp2p_receiver.unlock();
-            break;
-        }
-        mtx_pp2p_receiver.unlock();
     }
 }
