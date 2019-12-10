@@ -104,7 +104,10 @@ pp2p_message Link::get_next_message(){
     // TODO: Check this while loop
     while(true){
         unique_lock<mutex> lck(mtx_receiver);
-        cv_receiver.wait(lck, [&] { return !incoming_messages.empty(); });
+        cv_receiver.wait(lck, [&] { return !incoming_messages.empty() || stop_pp2p; });
+        if (stop_pp2p) {
+            break;   // Stop here before doing anything else
+        }
         queue_locked = true;
         pp2p_message msg = incoming_messages.front();
         incoming_messages.pop();
@@ -126,9 +129,6 @@ pp2p_message Link::get_next_message(){
                 pl_delivered[msg.proc_number].insert(msg.seq_number);
                 return msg;
             }
-        }
-        if (stop_pp2p) { // stop_pp2p is atomic, no need to manage concurrency.
-            break;
         }
     }
     // This happens only when the process is killed, no harm can be done!
@@ -222,6 +222,6 @@ void run_receiver(Link *link) {
         queue_locked = true;
         incoming_messages.push(msg);
         queue_locked = false;
-        cv_receiver.notify_one();
+        cv_receiver.notify_all();
     }
 }

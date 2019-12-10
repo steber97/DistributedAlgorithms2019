@@ -17,6 +17,8 @@ static int wait_for_start = 1;
 
 int process_number;
 
+int number_of_processes;
+
 int sockfd;
 
 static void start(int signum) {
@@ -91,7 +93,7 @@ int main(int argc, char** argv) {
     unordered_map<int, pair<string, int>>* input_data = parsed_data.first;
     vector<vector<int>>* dependencies = parsed_data.second;
 
-    int number_of_processes = input_data->size();
+    number_of_processes = input_data->size();
     int number_of_messages = stoi(argv[3]);
 
     struct sockaddr_in sock;
