@@ -89,7 +89,7 @@ void Link::send_ack(pp2p_message &msg) {
     inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
     string message_to_send = to_string(ack_message);
     sendto(sockfd, message_to_send.c_str(), strlen(message_to_send.c_str()),
-           MSG_CONFIRM, (const struct sockaddr *) &d_addr,
+           0, (const struct sockaddr *) &d_addr,
            sizeof(d_addr));
 
 }
@@ -167,7 +167,7 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
                 inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
 
                 sendto(sockfd, msg_c, strlen(msg_c),
-                       MSG_CONFIRM, (const struct sockaddr *) &d_addr,
+                       0, (const struct sockaddr *) &d_addr,
                        sizeof(d_addr));
 #ifdef DEBUG
                 cout << "Sent " << msg_c << " to " << dest_and_msg.first << endl;
