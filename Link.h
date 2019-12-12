@@ -20,30 +20,38 @@
 #include <thread>
 #include <condition_variable>
 #include <unordered_set>
+#include <chrono>
 
 #include "utilities.h"
 
-// #define DEBUG
+//#define DEBUG
 
 #define MAXLINE 1024
 #define MAX_NUMBER_OF_PROCESSES 100
 #define SLOW_START 0
 #define CONGESTION_AVOIDANCE 1
 #define FAST_RECOVERY 2
+#define DEFAULT_TIMEOUT 1000
+#define SMOOTHNESS 0.125
 
 using namespace std;
 
 /// To handle the size of the congestion
-vector<int> state;
-vector<int> congestion_window_size;
-vector<int> ssthresh;
-vector<int> duplicate_ack_count;
-vector<float> congestion_avoidance_augment;
-vector<mutex> mtx_state(MAX_NUMBER_OF_PROCESSES);
-vector<mutex> mtx_congestion_window_size(MAX_NUMBER_OF_PROCESSES);
-vector<mutex> mtx_ssthresh(MAX_NUMBER_OF_PROCESSES);
-vector<mutex> mtx_duplicate_ack_count(MAX_NUMBER_OF_PROCESSES);
+extern vector<int> state;
+extern vector<int> congestion_window_size;
+extern vector<int> ssthresh;
+extern vector<int> duplicate_ack_count;
+extern vector<float> congestion_avoidance_augment;
+extern vector<mutex> mtx_state;
+extern vector<mutex> mtx_congestion_window_size;
+extern vector<mutex> mtx_ssthresh;
+extern vector<mutex> mtx_duplicate_ack_count;
 
+/// To handle times
+extern vector<mutex> mtx_timeouts;
+extern vector<unsigned long> timeouts;
+extern vector<double> last_srtt;
+extern vector<double> last_sdev;
 
 /// These variables are useful to handle concurrency on data structure accessed by the threads sender and receiver
 extern mutex mtx_incoming_messages, mtx_acks;
@@ -93,101 +101,46 @@ public:
     void send_ack(pp2p_message &msg);
     pp2p_message get_next_message();
 
-    void on_new_ack(int proc_num);
-    void on_duplicate_ack(int proc_num);
-    void on_timeout(int proc_num);
-    void enqueue_messages(int proc_num, int number_of_messages);
 };
 
 void run_receiver(Link *link);
 
-int get_state(int proc_num) {
-    mtx_state[proc_num - 1].lock();
-    int s = state[proc_num - 1];
-    mtx_state[proc_num - 1].unlock();
-    return s;
-}
+//void run_timeoutter();
 
-int get_congestion_window_size(int proc_num) {
-    mtx_congestion_window_size[proc_num - 1].lock();
-    int size = congestion_window_size[proc_num - 1];
-    mtx_congestion_window_size[proc_num - 1].unlock();
-    return size;
-}
+void on_new_ack(int proc_num);
 
-int get_ssthresh(int proc_num) {
-    mtx_ssthresh[proc_num - 1].lock();
-    int size = ssthresh[proc_num - 1];
-    mtx_ssthresh[proc_num - 1].unlock();
-    return size;
-}
+void on_duplicate_ack(int proc_num);
 
-int get_duplicate_ack_count(int proc_num) {
-    mtx_duplicate_ack_count[proc_num - 1].lock();
-    int count = duplicate_ack_count[proc_num - 1];
-    mtx_duplicate_ack_count[proc_num - 1].unlock();
-    return count;
-}
+void enqueue_new_messages(int proc_num, int number_of_messages);
 
-void set_state(int proc_num, int new_value) {
-    mtx_state[proc_num - 1].lock();
-    state[proc_num - 1] = new_value;
-    mtx_state[proc_num - 1].unlock();
-}
+void on_timeout(int proc_num);
 
-/**
- * Setter for congestion window's size
- * @param proc_num the process of which the window should be set to the desired value
- * @param new_value the value to which set the window size
- * @return the number of messages to send to the process <proc_num>
- */
-int set_congestion_window_size(int proc_num, int new_value) {
-    mtx_congestion_window_size[proc_num - 1].lock();
-    int old_value = congestion_window_size[proc_num - 1];
-    congestion_window_size[proc_num - 1] = new_value;
-    mtx_congestion_window_size[proc_num - 1].unlock();
-    return max(0, new_value - old_value);
-}
+int get_state(int proc_num);
 
-/**
- * Increases congestion window's size according to the parameter state
- * @param proc_num the process of which the window should be increased
- * @param st the state of the connection with the process <proc_num>
- * @return the number of messages to send to the process <proc_num>
- */
-int increase_congestion_window_size(int proc_num, int st) {
-    bool size_incremented = false;
-    mtx_congestion_window_size[proc_num - 1].lock();
-    if (st == SLOW_START) {
-        congestion_window_size[proc_num - 1]++;
-        size_incremented = true;
-    } else if (st == CONGESTION_AVOIDANCE) {
-        congestion_avoidance_augment[proc_num - 1] += 1.0 / float(congestion_window_size[proc_num - 1]);
-    }
-    mtx_congestion_window_size[proc_num - 1].unlock();
+int get_congestion_window_size(int proc_num);
 
-    if (congestion_avoidance_augment[proc_num - 1] == 1.0)
-        size_incremented = true;
+int get_ssthresh(int proc_num);
 
-    return size_incremented ? 1 : 0;
-}
+int get_duplicate_ack_count(int proc_num);
 
-void set_ssthresh(int proc_num, int new_value) {
-    mtx_ssthresh[proc_num - 1].lock();
-    ssthresh[proc_num - 1] = new_value;
-    mtx_ssthresh[proc_num - 1].unlock();
-}
+unsigned long get_timeout(int proc_num);
 
-void reset_duplicate_ack_count(int proc_num) {
-    mtx_duplicate_ack_count[proc_num - 1].lock();
-    duplicate_ack_count[proc_num - 1] = 0;
-    mtx_duplicate_ack_count[proc_num - 1].unlock();
-}
+void set_state(int proc_num, int new_value);
 
-void increase_duplicate_ack_count(int proc_num) {
-    mtx_duplicate_ack_count[proc_num - 1].lock();
-    duplicate_ack_count[proc_num - 1]++;
-    mtx_duplicate_ack_count[proc_num - 1].unlock();
-}
+int set_congestion_window_size(int proc_num, int new_value);
+
+int increase_congestion_window_size(int proc_num, int st);
+
+void set_ssthresh(int proc_num, int new_value);
+
+void reset_duplicate_ack_count(int proc_num);
+
+void increase_duplicate_ack_count(int proc_num);
+
+void set_timeout(int proc_num, unsigned long new_value);
+
+unsigned long time_milli();
+
+void update_times(int proc_number, unsigned long sending_time);
 
 #endif //DISTRIBUTEDALGORITHMS2019_MANAGER_H

@@ -21,7 +21,7 @@ void BeBroadcast::init(){
  * @param msg to be broadcasted
  */
 void BeBroadcast::beb_broadcast(b_message &msg) {
-    pp2p_message pp2p_msg = pp2p_message(false, this->link->get_process_number(), msg);
+    pp2p_message pp2p_msg = pp2p_message(false, this->link->get_process_number(), 0UL, msg);
     for (int i = 1; i <= number_of_processes; i++) {
         link->send_to(i, pp2p_msg);
     }
@@ -60,6 +60,8 @@ void run_deliverer_beb(Link* link, BeBroadcast* be_broadcast){
         // is with same first_sender and seq number of the pp2p pp2p_message.
         if (!is_pp2p_fake(msg))   // only deliver it if it is not fake.
             be_broadcast->beb_deliver(msg.payload);
+        else
+            break;
     }
 }
 

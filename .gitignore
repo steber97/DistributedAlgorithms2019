@@ -9,3 +9,4 @@ da_proc_*.out
 membership
 test_performance.sh
 PASS
+log*

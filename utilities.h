@@ -22,8 +22,6 @@ extern bool stop_pp2p_receiver;
 extern bool stop_pp2p_sender;
 extern bool stop_pp2p_get_msg;
 
-bool check_concurrency_stop(mutex& mtx, bool& variable);
-
 
 /**
  * This is the broadcast message, it is used at the broadcast level
@@ -64,22 +62,26 @@ struct pp2p_message  {
     bool ack;
     int proc_number;
     long long seq_number;   // This sequence number has nothing to do with the sequence number of the broadcast level!
+    unsigned long int timestamp;
     b_message payload;
 
-    pp2p_message(bool ack, int proc_number, b_message &payload): payload(payload) {
+    pp2p_message(bool ack, int proc_number, unsigned long timestamp, b_message &payload): payload(payload) {
         // Constructor.
         this->ack = ack;
         this->proc_number = proc_number;
+        this->timestamp = timestamp;
         this->payload = payload;
     }
 
-    pp2p_message(bool ack, long long seq_number, int proc_number, b_message &payload){
+    pp2p_message(bool ack, long long seq_number, int proc_number, unsigned long timestamp, b_message &payload){
         // Constructor.
         this->ack = ack;
         this->seq_number = seq_number;
         this->proc_number = proc_number;
+        this->timestamp = timestamp;
         this->payload = payload;
     }
+
 };
 
 bool is_pp2p_fake(pp2p_message);
@@ -105,6 +107,8 @@ string to_string(pp2p_message &msg);
  */
 void urb_broadcast_log(b_message& msg);
 void urb_delivery_log(b_message& msg);
+
+void log(string s, int proc_num);
 
 
 /**
