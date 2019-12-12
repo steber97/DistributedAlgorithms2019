@@ -64,7 +64,10 @@ void BeBroadcast::beb_deliver(b_message &msg) {
 b_message BeBroadcast::get_next_beb_delivered(){
     // acquire the lock on the condition variable, shared with the thread running run_deliverer_beb
     unique_lock<mutex> lck(mtx_beb_urb);
-    cv_beb_urb.wait(lck, [&] { return !queue_beb_urb.empty(); });
+    cv_beb_urb.wait(lck, [&] { return !queue_beb_urb.empty() || stop_pp2p; });
+    if (stop_pp2p){
+        return create_fake_bmessage(this->number_of_processes);
+    }
     queue_beb_urb_locked = true;
     b_message msg = queue_beb_urb.front();  // push the message in the queue
     queue_beb_urb.pop();

@@ -154,6 +154,10 @@ void handle_beb_delivery(UrBroadcast *urb) {
         // First retrieves the message from beb
         b_message msg = urb->beb->get_next_beb_delivered();
 
+        if (stop_pp2p || is_bmessage_fake(msg))
+            // time to stop
+            break;
+
         // Add the message to acked ones.
         urb->mtx_acks.lock();
         if (urb->acks.find({msg.first_sender, msg.seq_number}) == urb->acks.end()) {

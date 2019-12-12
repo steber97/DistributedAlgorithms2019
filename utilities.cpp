@@ -194,3 +194,14 @@ string to_string(pp2p_message &msg){
                 + "/" + to_string(msg.payload.first_sender) + "-" + to_string(msg.payload.seq_number)       /* this is the broadcast msg */
                 + "/" + vc_string;        // this is the vector clock
 }
+
+bool is_bmessage_fake(b_message &bmessage) {
+    return bmessage.seq_number == -1;
+}
+
+b_message create_fake_bmessage(const int number_of_processes) {
+    vector<int> fake_vc(number_of_processes, INT32_MAX);   // Initialize it with stupid big numbers, so that it is not delivered as vc is too big!
+    lcob_message lcobMessage (-1, -1, fake_vc);
+    b_message fake_payload(-1, -1, lcobMessage);
+    return fake_payload;
+}

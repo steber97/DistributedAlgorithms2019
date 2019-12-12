@@ -135,12 +135,20 @@ struct pp2p_message  {
  */
 bool is_pp2p_fake(pp2p_message);
 
+bool is_bmessage_fake(b_message& bmessage);
+
 
 /**
  * Create a fake pp2p message, use only when closing the connection, in order to
  * stop even higher layers.
  */
 pp2p_message create_fake_pp2p(const int number_of_processes);
+
+/**
+ * Create a fake broadcast message, use only when closing the connection, in order to
+ * stop higher layers.
+ */
+b_message create_fake_bmessage(const int number_of_processes);
 
 
 /**

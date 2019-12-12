@@ -35,6 +35,7 @@ static void stop(int signum) {
 
     stop_pp2p = true;
     cv_receiver.notify_all();
+    cv_beb_urb.notify_all();
 
     shutdown(sockfd, SHUT_RDWR);
 
