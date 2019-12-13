@@ -32,15 +32,35 @@ writer itself. The latter option has been chosen, and implemented with
 c++ condition variables. 
 
 ### Link
-The link abstraction emulates TCP. 
-TODO: Further description
+The Link abstraction implements Perfect Link, 
+which must satisfy these properties
 
-1)  *Validity*: If pi and pj are correct, then every message sent by pi to pj is
+1) *Validity*: If pi and pj are correct, then every message sent by pi to pj is
     eventually delivered by pj
 2) *No duplication*: No message is
    delivered (to a process) more than once
 3) *No creation*: No message is
    delivered unless it was sent
+   
+We implemented Link using two threads, one for the receiver and
+one for the sender. The sender continues to resend the message until 
+an ack for that message is received. The receiver, instead,
+listens on the socket for incoming messages, and handles 
+differently acks and normal messages.
+
+We ensure *validity* by the assumption that udp eventually 
+delivers a message, when we keep resending it. In fact, until 
+we have received the ack for a message, we continue to resend it.
+
+*No duplication* property is guaranteed by the fact that we keep
+a data structure `pl_delivered` which ensures that we only deliver
+a message once.
+
+*No Creation* property is trivially guaranteed by the fact that 
+the `Link` doesn't create any message by itself, it only sends a
+ message when the upper layer requests it with the method `send_to`.
+
+
 
 ### Best Effort Broadcast
 *Best Effort Broadcast* need these three properties in order to be correct:
