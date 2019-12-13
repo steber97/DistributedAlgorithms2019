@@ -9,7 +9,6 @@ UrBroadcast::UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_o
     this->beb = beb;
     this->number_of_processes = number_of_processes;
     this->number_of_messages = number_of_messages;
-    this->urb_delivering_queue = new queue<b_message>;
 }
 
 
@@ -45,7 +44,7 @@ void UrBroadcast::urb_deliver(b_message &msg) {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
     cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue_locked; });
     urb_delivering_queue_locked = true;
-    this->urb_delivering_queue->push(msg);
+    this->urb_delivering_queue.push(msg);
     urb_delivering_queue_locked = false;
     cv_urb_delivering_queue.notify_all();
 
@@ -62,14 +61,14 @@ void UrBroadcast::urb_deliver(b_message &msg) {
  */
 b_message UrBroadcast::get_next_urb_delivered() {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
-    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue->empty() || stop_pp2p; });
+    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue.empty() || stop_pp2p; });
     if (stop_pp2p){
         b_message fake = create_fake_bmessage(this->number_of_processes);
         return fake;
     }
     urb_delivering_queue_locked = true;
-    b_message next_message = this->urb_delivering_queue->front();
-    this->urb_delivering_queue->pop();
+    b_message next_message = this->urb_delivering_queue.front();
+    this->urb_delivering_queue.pop();
     urb_delivering_queue_locked = false;
     cv_urb_delivering_queue.notify_all();
     return next_message;

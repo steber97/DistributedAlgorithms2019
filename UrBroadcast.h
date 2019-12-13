@@ -17,7 +17,7 @@ class UrBroadcast {
 private:
     int number_of_processes;
     int number_of_messages;
-    queue<b_message> *urb_delivering_queue;
+    queue<b_message> urb_delivering_queue;
 public:
 
     // pointer to the lower level beb instance
