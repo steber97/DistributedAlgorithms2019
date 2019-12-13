@@ -17,7 +17,7 @@ class UrBroadcast {
 private:
     int number_of_processes;
     int number_of_messages;
-    queue<b_message> urb_delivering_queue;
+    queue<b_message>* urb_delivering_queue;
 public:
 
     // pointer to the lower level beb instance
@@ -37,7 +37,7 @@ public:
 
 
     UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_of_messages);
-
+    ~UrBroadcast();
     /**
      * This method detaches a new thread which will listen to incoming beb delivered messages.
      */

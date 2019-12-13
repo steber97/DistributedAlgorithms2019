@@ -9,6 +9,7 @@ UrBroadcast::UrBroadcast(BeBroadcast *beb, int number_of_processes, int number_o
     this->beb = beb;
     this->number_of_processes = number_of_processes;
     this->number_of_messages = number_of_messages;
+    this->urb_delivering_queue = new queue<b_message>;
 }
 
 
@@ -42,7 +43,7 @@ void UrBroadcast::urb_deliver(b_message &msg) {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
     cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue_locked; });
     urb_delivering_queue_locked = true;
-    this->urb_delivering_queue.push(msg);
+    this->urb_delivering_queue->push(msg);
     urb_delivering_queue_locked = false;
     cv_urb_delivering_queue.notify_all();
 }
@@ -56,15 +57,15 @@ void UrBroadcast::urb_deliver(b_message &msg) {
  */
 b_message UrBroadcast::get_next_urb_delivered() {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
-    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue.empty() || sigkill; });
+    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue->empty() || sigkill; });
     if (sigkill){
         // Received kill signal by da_proc. Stop immediately
         b_message stop = create_stop_bmessage(this->number_of_processes);
         return stop;
     }
     urb_delivering_queue_locked = true;
-    b_message next_message = this->urb_delivering_queue.front();
-    this->urb_delivering_queue.pop();
+    b_message next_message = this->urb_delivering_queue->front();
+    this->urb_delivering_queue->pop();
     urb_delivering_queue_locked = false;
     cv_urb_delivering_queue.notify_all();
     return next_message;
@@ -134,6 +135,10 @@ void UrBroadcast::broadcast(b_message &msg) {
 b_message UrBroadcast::get_next_delivered() {
     // just a wrapper with the same name as in fifo, so that can be used as template in Local Causal Reliable Broadcast.
     return this->get_next_urb_delivered();
+}
+
+UrBroadcast::~UrBroadcast() {
+    delete(this->urb_delivering_queue);
 }
 
 
