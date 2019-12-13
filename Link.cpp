@@ -317,6 +317,9 @@ void on_new_ack(int proc_num) {
 
 
 void on_duplicate_ack(int proc_num) {
+
+    //log("duplicate", proc_num);
+
     int messages_to_send = 0;
     int s = get_state(proc_num);
     if (s == SLOW_START || s == CONGESTION_AVOIDANCE) {
@@ -518,7 +521,8 @@ void update_times(int proc_number, unsigned long sending_time) {
     double curr_sdev = 0.75 * last_sdev[proc_number - 1] + 0.25 * dev;
     last_sdev[proc_number - 1] = curr_sdev;
     unsigned long new_timeout = ceil(curr_srtt + 4 * curr_sdev);
-    set_timeout(proc_number, new_timeout);
+    if(new_timeout > 100)
+        set_timeout(proc_number, new_timeout);
 }
 
 

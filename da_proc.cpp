@@ -29,7 +29,7 @@ static void stop(int signum) {
 	signal(SIGINT, SIG_DFL);
 
 	// Stop delivering and sending message at the pp2p layer!
-    close(sockfd);
+    shutdown(sockfd, SHUT_RDWR);
 
     mtx_pp2p_sender.lock();
     stop_pp2p_sender = true;
@@ -131,6 +131,13 @@ int main(int argc, char** argv) {
     urb->init();
     fb->init();
 
+    for (int i = 1; i <= number_of_messages; i++) {
+        b_message msg (i, process_number);
+        //beb->beb_broadcast(msg);
+        //urb->urb_broadcast(msg);
+        fb->fb_broadcast(msg);
+    }
+
     //wait until start signal
 	while(wait_for_start) {
 		struct timespec sleep_time;
@@ -142,13 +149,8 @@ int main(int argc, char** argv) {
     //broadcast messages
     printf("Broadcasting messages.\n");
 
-    for (int i = 1; i <= number_of_messages; i++) {
-        b_message msg (i, link->get_process_number());
-        //beb->beb_broadcast(msg);
-        //urb->urb_broadcast(msg);
-        fb->fb_broadcast(msg);
-        usleep(10000);
-    }
+    for (int i = 1; i <= number_of_processes; i++)
+        enqueue_new_messages(i, 1);
 
     while(1) {
 		struct timespec sleep_time;

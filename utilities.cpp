@@ -17,6 +17,8 @@ bool stop_pp2p_receiver = false, stop_pp2p_sender = false, stop_pp2p_get_msg = f
 ofstream out1("log1");
 ofstream out2("log2");
 ofstream out3("log3");
+ofstream out4("log4");
+ofstream out5("log5");
 
 /**
  * Parses the input file
@@ -209,6 +211,12 @@ void log(string s, int proc_num) {
             break;
         case 3:
             out3 << s << endl;
+            break;
+        case 4:
+            out4 << s << endl;
+            break;
+        case 5:
+            out5 << s << endl;
             break;
         default:
             break;

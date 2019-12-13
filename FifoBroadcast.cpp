@@ -1,7 +1,5 @@
 #include "FifoBroadcast.h"
 
-mutex mtx_pending;
-
 FifoBroadcast::FifoBroadcast(UrBroadcast *urb, int number_of_processes) {
     this->urb = urb;
     this->next_to_deliver.resize(number_of_processes+1, 1);   // they are 1 plus the normal size, as we start counting by 1
