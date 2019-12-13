@@ -32,13 +32,18 @@ static void stop(int signum) {
 	signal(SIGINT, SIG_DFL);
 
 	// Stop delivering and sending message at the pp2p layer!
-
     stop_pp2p = true;
+
+
+    shutdown(sockfd, SHUT_RDWR);   // Close the socket!
+
+
+    // We need to notify all condition variables to stop.
+    // Otherwise, it is impossible for us to prevent deadlocks!
     cv_receiver.notify_all();
     cv_beb_urb.notify_all();
     cv_urb_delivering_queue.notify_all();
 
-    shutdown(sockfd, SHUT_RDWR);
 
     sleep(2);   // wait for sender and receiver to stop, so that after the below writing no message is received or sent.
 
