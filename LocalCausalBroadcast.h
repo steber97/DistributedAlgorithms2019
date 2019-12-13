@@ -1,7 +1,6 @@
 #ifndef DISTRIBUTED_ALGORITHMS_LOCALCAUSALBROADCAST_H
 #define DISTRIBUTED_ALGORITHMS_LOCALCAUSALBROADCAST_H
 
-#include "FifoBroadcast.h"
 #include "UrBroadcast.h"
 #include "utilities.h"
 
@@ -182,14 +181,6 @@ public:
      * @param msg_to_deliver
      */
     void lcob_deliver(lcob_message &msg_to_deliver);
-
-    /**
-     * Get next message from the lower layer Fifo.
-     * @param fifo
-     * @return lcob message delivered by fifo broadcast in fifo order (first in the queue first out).
-     * fifo broadcast and fifo order have nothing to do with each other
-     */
-    lcob_message get_next_delivered(FifoBroadcast* fifo);
 
     /**
      * Get next message from the lower layer Ur Broadcast.

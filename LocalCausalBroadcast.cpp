@@ -250,20 +250,6 @@ void LocalCausalBroadcast<T>::lcob_deliver(lcob_message &msg_to_deliver) {
     delivery_log<lcob_message>(msg_to_deliver);
 }
 
-
-/**
- * Get next message from the lower layer Fifo.
- * @param fifo
- * @return lcob message delivered by fifo broadcast in fifo order (first in the queue first out).
- * fifo broadcast and fifo order have nothing to do with each other
- */
-template<>
-lcob_message LocalCausalBroadcast<FifoBroadcast>::get_next_delivered(FifoBroadcast *fifo) {
-    // this gets the message from the interface.
-    // can be either fifo or urb. (depends on the template T).
-    return this->interface->get_next_delivered();
-}
-
 /**
  * Get next message from the lower layer Ur Broadcast.
  * @param urb
@@ -279,13 +265,10 @@ lcob_message LocalCausalBroadcast<UrBroadcast>::get_next_delivered(UrBroadcast *
 
 // actually instantiate the classes that I need
 // it is done in this fancy way otherwise the template gets broken!
-template class LocalCausalBroadcast<FifoBroadcast>;
 template class LocalCausalBroadcast<UrBroadcast>;
 
-template class Node<FifoBroadcast>;
 template class Node<UrBroadcast>;
 
-template class Graph<FifoBroadcast>;
 template class Graph<UrBroadcast>;
 
 
