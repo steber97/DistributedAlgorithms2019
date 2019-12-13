@@ -6,13 +6,7 @@
 mutex mtx_log;
 vector<string> log_actions;
 
-// This is the mutex used to communicate with the shared queue between the urb and the beb.
-mutex mtx_beb_urb;
-queue<b_message> queue_beb_urb;
-bool queue_beb_urb_locked = false;
-condition_variable cv_beb_urb;
-
-atomic<bool> stop_pp2p(false);
+atomic<bool> sigkill(false);
 
 /**
  * Parses the input file
@@ -50,28 +44,6 @@ pair<unordered_map<int, pair<string, int>> *, vector<vector<int>>*> parse_input_
 
     return {socket_by_process_id, dependencies};
 }
-
-
-/**
- * Checks whether the message is fake! A bit dirty,
- * we deliver fake messages when we close the connection and bad things happen!
- * @return
- */
-bool is_pp2p_fake(pp2p_message msg){
-    return msg.seq_number == -1;
-}
-
-
-/**
- * Create a fake pp2p message, use only when closing the connection, in order to
- * stop even higher layers.
- */
-pp2p_message create_fake_pp2p(const int number_of_processes){
-
-    b_message fake_payload = create_fake_bmessage(number_of_processes);
-    return pp2p_message(false, -1LL, -1, -1, fake_payload);
-}
-
 
 /**
  * emulates the python split function
@@ -196,22 +168,40 @@ string to_string(pp2p_message &msg){
                 + "/" + vc_string;        // this is the vector clock
 }
 
-bool is_bmessage_fake(b_message &bmessage) {
+/**
+ * Checks whether the message is stop message!
+ * We deliver stop messages when we close the connection and bad things happen!
+ * @return
+ */
+bool is_pp2p_stop_message(pp2p_message &msg){
+    return msg.seq_number == -1;
+}
+
+bool is_b_stop_message(b_message &bmessage) {
     return bmessage.seq_number == -1;
 }
 
-
-bool is_lcobmessage_fake(lcob_message &lcob_message) {
+bool is_lcob_stop_message(lcob_message &lcob_message) {
     return lcob_message.seq_number == -1;
 }
 
-b_message create_fake_bmessage(const int number_of_processes) {
-    lcob_message lcobMessage = create_fake_lcobmessage(number_of_processes);
-    b_message fake_payload(-1, -1, lcobMessage);
-    return fake_payload;
+/**
+ * Create a stop pp2p message, use only when closing the connection, in order to
+ * stop even higher layers.
+ */
+pp2p_message create_stop_pp2p_message(const int number_of_processes){
+
+    b_message stop_payload = create_stop_bmessage(number_of_processes);
+    return pp2p_message(false, -1LL, -1, -1, stop_payload);
 }
 
-lcob_message create_fake_lcobmessage(const int number_of_processes) {
+b_message create_stop_bmessage(const int number_of_processes) {
+    lcob_message lcobMessage = create_stop_lcobmessage(number_of_processes);
+    b_message stop_payload(-1, -1, lcobMessage);
+    return stop_payload;
+}
+
+lcob_message create_stop_lcobmessage(const int number_of_processes) {
     vector<int> fake_vc(number_of_processes, INT32_MAX);   // Initialize it with stupid big numbers, so that it is not delivered as vc is too big!
     lcob_message lcobMessage (-1, -1, fake_vc);
     return lcobMessage;

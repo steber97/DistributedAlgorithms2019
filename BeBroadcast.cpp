@@ -1,5 +1,11 @@
 #include "BeBroadcast.h"
 
+// This is the mutex used to communicate with the shared queue between the urb and the beb.
+mutex mtx_beb_urb;
+queue<b_message> queue_beb_urb;
+bool queue_beb_urb_locked = false;
+condition_variable cv_beb_urb;
+
 
 BeBroadcast::BeBroadcast(Link* link, int number_of_processes, int number_of_messages){
     this->link = link;
@@ -7,18 +13,15 @@ BeBroadcast::BeBroadcast(Link* link, int number_of_processes, int number_of_mess
     this->number_of_messages = number_of_messages;
 }
 
-
-
 /**
  * Initialization phase, it detaches a new thread which stays forever listening to
  * new messages from perfect links.
  */
 void BeBroadcast::init(){
     // starts the deliverer on a separate detached thread
-    thread delivery_checker(run_deliverer_beb, this->link, this);
+    thread delivery_checker(handle_link_delivered, this->link, this);
     delivery_checker.detach();
 }
-
 
 /**
  * Broadcasts a message to all processes.
@@ -47,9 +50,6 @@ void BeBroadcast::beb_deliver(b_message &msg) {
     queue_beb_urb.push(msg);
     queue_beb_urb_locked = false;
     cv_beb_urb.notify_one();
-
-    // log the delivery of the message
-    // urb_delivery_log(msg);
 }
 
 
@@ -63,11 +63,11 @@ void BeBroadcast::beb_deliver(b_message &msg) {
  * @return the first message which has been beb_delivered
  */
 b_message BeBroadcast::get_next_beb_delivered(){
-    // acquire the lock on the condition variable, shared with the thread running run_deliverer_beb
+    // acquire the lock on the condition variable, shared with the thread running handle_link_delivered
     unique_lock<mutex> lck(mtx_beb_urb);
-    cv_beb_urb.wait(lck, [&] { return !queue_beb_urb.empty() || stop_pp2p; });
-    if (stop_pp2p){
-        return create_fake_bmessage(this->number_of_processes);
+    cv_beb_urb.wait(lck, [&] { return !queue_beb_urb.empty() || sigkill; });
+    if (sigkill){
+        return create_stop_bmessage(this->number_of_processes);
     }
     queue_beb_urb_locked = true;
     b_message msg = queue_beb_urb.front();  // push the message in the queue
@@ -84,21 +84,22 @@ b_message BeBroadcast::get_next_beb_delivered(){
  * This method runs on a separate thread, just listens to incoming messages coming from
  * the lower layer (perfect Link) and beb delivers them as soon as they arrive.
  *
- * Small caveat: sometimes perfect link sends garbage (it happens for instance during threads shutdown)
- * When it happens, fake messages are sent.
+ * Small caveat: perfect link sends stop messages when da_proc is killed
+ * When it happens, stop messages are delivered by Link.
  *
  * @param link
  * @param beb_broadcast
  */
-void run_deliverer_beb(Link* link, BeBroadcast* be_broadcast){
+void handle_link_delivered(Link* link, BeBroadcast* be_broadcast){
     while(true) {
         pp2p_message msg = link->get_next_message();
         // the broadcast pp2p_message that the beb delivery gets
         // is with same first_sender and seq number of the pp2p pp2p_message.
-        if (!stop_pp2p and ! is_pp2p_fake(msg)) {  // only deliver it if it is not fake.
+        if (!sigkill and !is_pp2p_stop_message(msg)) {  // only deliver it if it is not stop_message.
             be_broadcast->beb_deliver(msg.payload);
         }
         else {
+            // Time to stop the detached thread
             break;
         }
     }

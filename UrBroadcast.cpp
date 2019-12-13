@@ -27,11 +27,9 @@ void UrBroadcast::init() {
  * @param msg
  */
 void UrBroadcast::urb_broadcast(b_message &msg)  {
-    //urb_broadcast_log(msg);
     this->mtx_forward.lock();
     this->forward.insert({msg.first_sender, msg.seq_number});
     this->mtx_forward.unlock();
-
     beb->beb_broadcast(msg);
 }
 
@@ -47,9 +45,6 @@ void UrBroadcast::urb_deliver(b_message &msg) {
     this->urb_delivering_queue.push(msg);
     urb_delivering_queue_locked = false;
     cv_urb_delivering_queue.notify_all();
-
-    // Log the delivery of the message
-    //urb_delivery_log(msg);
 }
 
 
@@ -61,10 +56,11 @@ void UrBroadcast::urb_deliver(b_message &msg) {
  */
 b_message UrBroadcast::get_next_urb_delivered() {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
-    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue.empty() || stop_pp2p; });
-    if (stop_pp2p){
-        b_message fake = create_fake_bmessage(this->number_of_processes);
-        return fake;
+    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue.empty() || sigkill; });
+    if (sigkill){
+        // Received kill signal by da_proc. Stop immediately
+        b_message stop = create_stop_bmessage(this->number_of_processes);
+        return stop;
     }
     urb_delivering_queue_locked = true;
     b_message next_message = this->urb_delivering_queue.front();
@@ -121,7 +117,7 @@ int UrBroadcast::get_number_of_processes() {
 
 
 /**
- * just an alias for urb_broadcast so that it can be used with templates
+ * Just an alias for urb_broadcast so that it can be used with templates
  * @param msg
  */
 void UrBroadcast::broadcast(b_message &msg) {
@@ -157,7 +153,7 @@ void handle_beb_delivery(UrBroadcast *urb) {
         // First retrieves the message from beb
         b_message msg = urb->beb->get_next_beb_delivered();
 
-        if (stop_pp2p || is_bmessage_fake(msg))
+        if (sigkill || is_b_stop_message(msg))
             // time to stop
             break;
 

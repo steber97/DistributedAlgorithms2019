@@ -36,18 +36,15 @@ static void stop(int signum) {
 	signal(SIGINT, SIG_DFL);
 
 	// Stop delivering and sending message at the pp2p layer!
-    stop_pp2p = true;
-
+    sigkill = true;
 
     shutdown(sockfd, SHUT_RDWR);   // Close the socket!
 
-
-    // We need to notify all condition variables to stop.
+    // We need to notify all condition variables to stop detached threads.
     // Otherwise, it is impossible for us to prevent deadlocks!
-    cv_receiver.notify_all();
+    cv_incoming_messages.notify_all();
     cv_beb_urb.notify_all();
     cv_urb_delivering_queue.notify_all();
-
 
     //immediately stop network packet processing
     printf("Immediately stopping network packet processing.\n");
@@ -93,18 +90,14 @@ int main(int argc, char** argv) {
     // it is a global variable, used even in the signal handler to manage the output file.
     process_number = atoi(argv[1]);
 
-	//parse arguments, including membership
-	//initialize application
-	//start listening for incoming UDP packets
-
 	string membership_file = argv[2];
 
-	// input data contains both the number of messages to send per each process,
-	// and the mapping among processes and ip/port
+	// membership file contains the number of messages to send for each process,
+	// the mapping among processes and ip/port and the dependencies
 	pair<unordered_map<int, pair<string, int>>*, vector<vector<int>>*> parsed_data = parse_input_data(membership_file);
 
-    unordered_map<int, pair<string, int>>* input_data = parsed_data.first;
-    vector<vector<int>>* dependencies = parsed_data.second;
+    unordered_map<int, pair<string, int>>* input_data = parsed_data.first;  // map process number -> ip address and port.
+    vector<vector<int>>* dependencies = parsed_data.second;    // lcob dependencies
 
     number_of_processes = input_data->size();
     int number_of_messages = stoi(argv[3]);
@@ -127,6 +120,7 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
+    // Initialize abstraction layers.
     pp2p_link = new Link (sockfd, process_number, input_data, number_of_processes);
     beb = new BeBroadcast(pp2p_link, number_of_processes, number_of_messages);
     urb = new UrBroadcast(beb, number_of_processes, number_of_messages);
@@ -139,6 +133,7 @@ int main(int argc, char** argv) {
     // Resize the delivered messages matrix (at the perfect link layer) It is used to avoid duplicates.
     pl_delivered.resize(number_of_processes+1, unordered_set<long long>());
 
+    // Detach threads
     pp2p_link->init();
     beb->init();
     urb->init();
@@ -152,12 +147,11 @@ int main(int argc, char** argv) {
 		nanosleep(&sleep_time, NULL);
 	}
 
+    // the vector clock can't be set here, it will be set in LocalCausalBroadcast, just before broadcasting.
+    vector<int> vector_clock_false(number_of_processes+1, 0);
+
     //broadcast messages
     printf("Broadcasting messages.\n");
-
-
-    // the vector clock can't be set here, it will be set in LocalCausalBroadcast, just before broadcasting.
-	vector<int> vector_clock_false(number_of_processes+1, 0);
 
     for (int i = 1; i <= number_of_messages; i++) {
         lcob_message lcob_msg (i, pp2p_link->get_process_number(), vector_clock_false);

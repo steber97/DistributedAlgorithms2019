@@ -18,7 +18,7 @@ using namespace std;
 extern mutex mtx_log;
 extern vector<string> log_actions;
 
-extern atomic<bool> stop_pp2p;
+extern atomic<bool> sigkill;
 
 bool check_concurrency_stop(mutex& mtx, bool& variable);
 
@@ -132,34 +132,34 @@ struct pp2p_message  {
 
 
 /**
- * Checks whether the message is fake! A bit dirty,
- * we deliver fake messages when we close the connection and bad things happen!
+ * Checks whether the message is stop! A bit dirty,
+ * we deliver stop messages when we close the connection and bad things happen!
  * @return
  */
-bool is_pp2p_fake(pp2p_message);
+bool is_pp2p_stop_message(pp2p_message &msg);
 
-bool is_bmessage_fake(b_message& bmessage);
+bool is_b_stop_message(b_message& bmessage);
 
-bool is_lcobmessage_fake(lcob_message& lcob_message);
+bool is_lcob_stop_message(lcob_message& lcob_message);
 
 
 /**
- * Create a fake pp2p message, use only when closing the connection, in order to
+ * Create a stop pp2p message, use only when closing the connection, in order to
  * stop even higher layers.
  */
-pp2p_message create_fake_pp2p(const int number_of_processes);
+pp2p_message create_stop_pp2p_message(const int number_of_processes);
 
 /**
- * Create a fake broadcast message, use only when closing the connection, in order to
+ * Create a stop broadcast message, use only when closing the connection, in order to
  * stop higher layers.
  */
-b_message create_fake_bmessage(const int number_of_processes);
+b_message create_stop_bmessage(const int number_of_processes);
 
 /**
- * Create a fake broadcast message, use only when closing the connection, in order to
+ * Create a stop broadcast message, use only when closing the connection, in order to
  * stop higher layers.
  */
-lcob_message create_fake_lcobmessage(const int number_of_processes);
+lcob_message create_stop_lcobmessage(const int number_of_processes);
 
 
 
@@ -245,15 +245,6 @@ void delivery_log(T& msg) {
 }
 
 
-/**
- * These are used to handle the queue that is in the middle between beb and urb,
- * it contains the messages delivered by beb and that should be handled by urb
- */
-extern queue<b_message> queue_beb_urb; // the actual queue
-
-extern condition_variable cv_beb_urb;  //
-extern mutex mtx_beb_urb;              // to handle concurrency on the queue
-extern bool queue_beb_urb_locked;      //
 
 #endif //PROJECT_TEMPLATE_UTILITIES_H
 

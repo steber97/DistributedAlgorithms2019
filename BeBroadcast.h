@@ -6,8 +6,21 @@
 #ifndef DISTRIBUTED_ALGORITHMS_BEBROADCAST_H
 #define DISTRIBUTED_ALGORITHMS_BEBROADCAST_H
 
+
+
 /**
- * This class represent the best-effort broadcast abstraction
+ * These are used to handle the queue that is in the middle between beb and urb,
+ * it contains the messages delivered by beb and that should be handled by urb
+ */
+extern queue<b_message> queue_beb_urb; // the actual queue
+
+extern condition_variable cv_beb_urb;  //
+extern mutex mtx_beb_urb;              // to handle concurrency on the queue
+extern bool queue_beb_urb_locked;      //
+
+
+/**
+ * This class represents the best-effort broadcast abstraction
  * It simply relies on the perfect link properties in order to fulfill
  * validity, no duplication and no creation.
  */
@@ -55,12 +68,12 @@ public:
  * the lower layer (perfect Link) and beb delivers them as soon as they arrive.
  *
  * Small caveat: sometimes perfect link sends garbage (it happens for instance during threads shutdown)
- * When it happens, fake messages are sent.
+ * When it happens, stop messages are sent.
  *
  * @param link
- * @param beb_broadcast
+ * @param be_broadcast
  */
-void run_deliverer_beb(Link* link, BeBroadcast* beb_broadcast);
+void handle_link_delivered(Link* link, BeBroadcast* be_broadcast);
 
 
 #endif //DISTRIBUTED_ALGORITHMS_BEBROADCAST_H

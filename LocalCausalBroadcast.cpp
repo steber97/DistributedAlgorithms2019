@@ -1,21 +1,19 @@
-
 #include "LocalCausalBroadcast.h"
 
-
 /**
- * This is used to build lcob on top of fifo
+ * This is used to build lcob on top of fifo or urb
  * @param lcob
  */
 template<typename T>
-void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob);
+void handle_interface_delivered(LocalCausalBroadcast<T> *lcob);
 
 /**
  * Detach the thread which gets new delivered messages from lower abstractions.
  */
 template<typename T>
-void LocalCausalBroadcast<T>::init() {  // init method to spawn the thread that will handle the fifo delivery
+void LocalCausalBroadcast<T>::init() {  // init method to spawn the thread that will handle the fifo or urb delivery
     // This can both use the urb or fifo handler!
-    thread t_delivered_handler(handle_delivered_lcob<T>, this);
+    thread t_delivered_handler(handle_interface_delivered<T>, this);
     t_delivered_handler.detach();
 
 }
@@ -32,30 +30,31 @@ void LocalCausalBroadcast<T>::init() {  // init method to spawn the thread that 
  * @param lcob
  */
 template<typename T>
-void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob){
+void handle_interface_delivered(LocalCausalBroadcast<T> *lcob){
     while (true) {
         lcob_message msg = lcob->get_next_delivered(lcob->interface);
 
-        if (stop_pp2p || is_lcobmessage_fake(msg)){
+        if (sigkill || is_lcob_stop_message(msg)){
             break;   // time to stop!
         }
-        // lcob->lcob_deliver(msg);   // up to now deliver immediately, as if we are doing fifo
-        // first check if the message can be delivered immediately (vc is OK)
 
-
-        // first check if the message already exists in the graph:
+        // First check if the message already exists in the graph:
         if (lcob->graph->nodes.find({msg.first_sender, msg.seq_number}) == lcob->graph->nodes.end()){
+            // If it doesn't exist, create an empy node
             lcob->graph->nodes[{msg.first_sender, msg.seq_number}] = new Node<T>(true,
                                                                                  lcob->graph,
                                                                                  lcob->local_vc, msg, lcob);
         }
         else{
-            // otherwise update the
+            // otherwise update the already existing empty node (update the vc)
             lcob->graph->nodes[{msg.first_sender, msg.seq_number}]->update_existing_node(msg, lcob->local_vc);
         }
+
+        // Try to deliver it (deliver recursively manages the local causal properties)
         lcob->graph->nodes[{msg.first_sender, msg.seq_number}]->deliver_recursively(lcob->local_vc);
     }
 
+    // As soon as we receive the sigkill, delete the graph.
     delete(lcob->graph);
 }
 
@@ -73,11 +72,12 @@ bool Node<T>::can_be_delivered() {
 
 
 /**
- * This method must build the node.
+ * This method builds the node.
  * delivered is certainly False, received can be either true either false.
  * count the unmet dependencies (through the vector_clock)
  * and set edges from its dependencies to itself.
  * Careful, vector_clock can be empty/wrong (when received == false).
+ * When received == false you should never use vc
  * @param id
  * @param vector_clock
  */
@@ -85,8 +85,8 @@ template <typename T>
 Node<T>::Node(bool received, Graph<T> *graph,
               vector<int>& local_vc, lcob_message msg, LocalCausalBroadcast<T>* lcob) {
 
-    this->delivered = false;   // the message is not delivered by default
-    this->received = received;   // we may have created a new node either when receiving a new message,
+    this->delivered = false;   // The message is not delivered by default
+    this->received = received;   // We may have created a new node either when receiving a new message,
     // either when we create the dependency nodes (received = false)
     this->graph = graph;
     this->lcob = lcob;
@@ -94,15 +94,15 @@ Node<T>::Node(bool received, Graph<T> *graph,
 
     if (received){
         // the message is true only when creating it after having received the message.
-        // otherwise it is just a fake message
+        // otherwise the node has been created without having actually received the message.
         this->msg = msg;
-        for (size_t i = 1; i<msg.vc.size(); i++){   // the vector clock is longer by 1
+        for (size_t i = 1; i<msg.vc.size(); i++){   // The vector clock is longer by 1
             // Do we have a dependency?
             if (msg.vc[i] > local_vc[i]){  // i is the process number, vector_clock[i] the sequence number
                 // Do we need to insert a new node?
                 if (graph->nodes.find({i, msg.vc[i]}) == graph->nodes.end() ){
-                    // CAREFUL HERE: vector_clock is not right! should be read only when received == true;
-                    // the same for lcob_message
+                    // CAREFUL HERE: vector_clock can only be read when received is true!
+                    // The same for lcob_message
                     graph->nodes[{i, msg.vc[i]}] = new Node(false, graph,
                                                             this->lcob->local_vc, this->msg, this->lcob);
                 }
@@ -112,8 +112,6 @@ Node<T>::Node(bool received, Graph<T> *graph,
             }
         }
     }
-
-
 }
 
 /**
@@ -138,26 +136,24 @@ void Node<T>::add_dependency(Node<T> *node) {
 template <typename T>
 void Node<T>::deliver_recursively(vector<int>& local_vc) {
     if (!this->can_be_delivered()){
-        // can't do anything
+        // Can't do anything
         return;
     }
 
-    // deliver the message
+    // Deliver the message
     this->delivered = true;
     this->lcob->lcob_deliver(this->msg);
-    // as vector clock is passed as a reference, it gets updated even in the LocalCausalBroadcast class
-    local_vc[this->msg.first_sender] ++;   // increment the vector clock
+    // As vector clock is passed as a reference, it gets updated even in the LocalCausalBroadcast class
+    local_vc[this->msg.first_sender] ++;   // Increment the vector clock
 
     for (size_t i = 0; i< this->is_dependency_of.size(); i++){
-        // try recursively to deliver all dependencies!
-        // first remove one unmet_dependency (we have just delivered a new message)
+        // Try recursively to deliver all dependencies!
+        // First remove one unmet_dependency (we have just delivered a new message)
         this->is_dependency_of[i]->delete_one_dependency();
 
-        // the function already checks for the possibility to deliver
+        // The function already checks for the possibility to deliver
         this->is_dependency_of[i]->deliver_recursively(local_vc);
     }
-
-
 }
 
 
@@ -174,7 +170,7 @@ void Node<T>::delete_one_dependency() {
 /**
  * Update an existing node.
  * When creating the node without having received the actual message, we can invoke this method
- * to update all the useful missing information
+ * to update all the useful missing when actually receiving the message.
  * For instance, it sets received to true, creates the edges to itself and
  * computes unmet_dependencies
  *
@@ -183,7 +179,7 @@ void Node<T>::delete_one_dependency() {
  */
 template <typename T>
 void Node<T>::update_existing_node(lcob_message& msg, vector<int>& local_vc) {
-    // we have finally a message for that node.
+    // We have finally a message for that node.
     this->msg = msg;
     this->received = true;
 
@@ -192,7 +188,7 @@ void Node<T>::update_existing_node(lcob_message& msg, vector<int>& local_vc) {
             // we have a dependency
             if (graph->nodes.find({i, msg.vc[i]}) == graph->nodes.end() ){
                 // we need to insert a new node
-                // CAREFUL HERE: vector_clock is not right! should be read only when received == true;
+                // CAREFUL HERE: vector_clock should be read only when received == true;
                 // the same for lcob_message
                 graph->nodes[{i, msg.vc[i]}] = new Node<T>(false, graph,
                                                            this->lcob->local_vc, this->msg, this->lcob);
