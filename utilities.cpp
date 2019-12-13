@@ -68,10 +68,8 @@ bool is_pp2p_fake(pp2p_message msg){
  */
 pp2p_message create_fake_pp2p(const int number_of_processes){
 
-    vector<int> fake_vc(number_of_processes, INT32_MAX);   // Initialize it with stupid big numbers, so that it is not delivered as vc is too big!
-    lcob_message lcobMessage (-1, -1, fake_vc);
-    b_message fake_payload(-1, -1, lcobMessage);
-    return pp2p_message(false, -1LL, -1, fake_payload);
+    b_message fake_payload = create_fake_bmessage(number_of_processes);
+    return pp2p_message(false, -1LL, -1, -1, fake_payload);
 }
 
 
@@ -125,7 +123,7 @@ vector<string>* split(const string& s, char c){
  * @param msg
  * @return
  */
-pp2p_message parse_message(const string &msg) {
+pp2p_message parse_message(const string &msg, const int process_number) {
 
     vector<string>* cont_outer;
     char delim_outer = '/';
@@ -161,7 +159,10 @@ pp2p_message parse_message(const string &msg) {
     }
     lcob_message lcob_m (seq_number_broad, sender, vector_clock);
     b_message urb_msg(seq_number_broad, sender, lcob_m);
-    pp2p_message pp2p_msg(ack, seq_number_pp2p, proc_number, urb_msg);
+
+    // I think the destination process when receiving the message is just useless, its the process itself.
+    // But we will set it for clarity.
+    pp2p_message pp2p_msg(ack, seq_number_pp2p, proc_number, process_number, urb_msg);
 
     delete(cont_outer);
     delete(cont1);

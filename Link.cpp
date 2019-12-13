@@ -64,7 +64,8 @@ void Link::send_to(int d_process_number, pp2p_message& msg) {
     long long seq_number = this->last_seq_number[d_process_number] ++;
     msg.seq_number = seq_number;
     mtx_sender.lock();
-    outgoing_messages.push({d_process_number, msg});
+    /// TODO: this is just fake, the -2 must be converted into the priority!
+    outgoing_messages.push({-2, msg});
     mtx_sender.unlock();
 }
 
@@ -77,7 +78,8 @@ void Link::send_ack(pp2p_message &msg) {
     int source_process = process_number;
     int dest_process = msg.proc_number;
 
-    pp2p_message ack_message(true, msg.seq_number, source_process, msg.payload);
+    // here the destination process number is just useless, we already know it (it is the sender of the message).
+    pp2p_message ack_message(true, msg.seq_number, source_process, -1, msg.payload);
 
     struct sockaddr_in d_addr;
 
@@ -148,21 +150,21 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
     while (true) {
         mtx_sender.lock();
         if (!outgoing_messages.empty()) {
-            pair<int, pp2p_message> dest_and_msg = outgoing_messages.front();
+            pair<int, pp2p_message> prior_and_msg = outgoing_messages.front();
             outgoing_messages.pop();
             mtx_sender.unlock();
 
             mtx_acks.lock();
-            if (acks[dest_and_msg.first].find(dest_and_msg.second.seq_number) == acks[dest_and_msg.first].end()){
+            if (acks[prior_and_msg.second.dest_proc_number].find(prior_and_msg.second.seq_number) == acks[prior_and_msg.second.dest_proc_number].end()){
                 // Send only if the ack hasn't been received
                 mtx_acks.unlock();
-                string msg_s = to_string(dest_and_msg.second);
+                string msg_s = to_string(prior_and_msg.second);
                 const char *msg_c = msg_s.c_str();
 
                 memset(&d_addr, 0, sizeof(d_addr));
                 d_addr.sin_family = AF_INET;
-                d_addr.sin_port = (*socket_by_process_id)[dest_and_msg.first].second;
-                string ip_address = (*socket_by_process_id)[dest_and_msg.first].first;
+                d_addr.sin_port = (*socket_by_process_id)[prior_and_msg.second.dest_proc_number].second;
+                string ip_address = (*socket_by_process_id)[prior_and_msg.second.dest_proc_number].first;
                 // wrong line here
                 inet_pton(AF_INET, ip_address.c_str(), &(d_addr.sin_addr));
 
@@ -172,9 +174,9 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
 #ifdef DEBUG
                 cout << "Sent " << msg_c << " to " << dest_and_msg.first << endl;
 #endif
-                if (!dest_and_msg.second.ack) {
+                if (!prior_and_msg.second.ack) {
                     mtx_sender.lock();
-                    outgoing_messages.push(dest_and_msg);
+                    outgoing_messages.push(prior_and_msg);
                     mtx_sender.unlock();
                 }
             } else {
@@ -212,7 +214,7 @@ void run_receiver(Link *link) {
 
         buf[n] = '\0';
 
-        pp2p_message msg = parse_message(string(buf));
+        pp2p_message msg = parse_message(string(buf), link->get_process_number());
 #ifdef DEBUG
         cout << "\nNew message " << msg.proc_number << " " << msg.seq_number << endl;
 #endif

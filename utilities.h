@@ -109,20 +109,23 @@ struct pp2p_message  {
     int proc_number;
     long long seq_number;   // This sequence number has nothing to do with the sequence number of the broadcast level!
     b_message payload;
+    int dest_proc_number;
 
-    pp2p_message(bool ack, int proc_number, b_message &payload): payload(payload) {
+    pp2p_message(bool ack, int proc_number, int dest_proc_number, b_message &payload) {
         // Constructor.
         this->ack = ack;
         this->proc_number = proc_number;
         this->payload = payload;
+        this->dest_proc_number = dest_proc_number;
     }
 
-    pp2p_message(bool ack, long long seq_number, int proc_number, b_message &payload){
+    pp2p_message(bool ack, long long seq_number, int proc_number, int dest_proc_number, b_message &payload){
         // Constructor.
         this->ack = ack;
         this->seq_number = seq_number;
         this->proc_number = proc_number;
         this->payload = payload;
+        this->dest_proc_number = dest_proc_number;
     }
 
 };
@@ -186,7 +189,7 @@ vector<string>* split(const string& s, char c);
  *        at the broadcast level message 26 sent originally by process 2, with a vector clock 1,3,4
  * @return a struct of type message
  */
-pp2p_message parse_message(const string &msg);
+pp2p_message parse_message(const string &msg, const int process_number);
 
 
 /**

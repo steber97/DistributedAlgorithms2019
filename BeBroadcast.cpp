@@ -25,10 +25,11 @@ void BeBroadcast::init(){
  * @param msg the message to broadcast.
  */
 void BeBroadcast::beb_broadcast(b_message &msg) {
-    pp2p_message pp2p_msg = pp2p_message(false, this->link->get_process_number(), msg);
-
     // Just send the message to every process.
+
     for (int i = 1; i <= number_of_processes; i++) {
+        pp2p_message pp2p_msg = pp2p_message(false, this->link->get_process_number(), i, msg);
+        // we do not specify here the sequence number! It will be set by Link!
         link->send_to(i, pp2p_msg);
     }
 }
