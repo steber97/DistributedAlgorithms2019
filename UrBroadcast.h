@@ -10,6 +10,9 @@
 using namespace std;
 
 
+extern condition_variable cv_urb_delivering_queue;
+
+
 class UrBroadcast {
 private:
     int number_of_processes;

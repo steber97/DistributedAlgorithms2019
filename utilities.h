@@ -137,6 +137,8 @@ bool is_pp2p_fake(pp2p_message);
 
 bool is_bmessage_fake(b_message& bmessage);
 
+bool is_lcobmessage_fake(lcob_message& lcob_message);
+
 
 /**
  * Create a fake pp2p message, use only when closing the connection, in order to
@@ -149,6 +151,13 @@ pp2p_message create_fake_pp2p(const int number_of_processes);
  * stop higher layers.
  */
 b_message create_fake_bmessage(const int number_of_processes);
+
+/**
+ * Create a fake broadcast message, use only when closing the connection, in order to
+ * stop higher layers.
+ */
+lcob_message create_fake_lcobmessage(const int number_of_processes);
+
 
 
 /**

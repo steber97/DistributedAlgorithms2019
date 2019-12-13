@@ -199,9 +199,20 @@ bool is_bmessage_fake(b_message &bmessage) {
     return bmessage.seq_number == -1;
 }
 
+
+bool is_lcobmessage_fake(lcob_message &lcob_message) {
+    return lcob_message.seq_number == -1;
+}
+
 b_message create_fake_bmessage(const int number_of_processes) {
-    vector<int> fake_vc(number_of_processes, INT32_MAX);   // Initialize it with stupid big numbers, so that it is not delivered as vc is too big!
-    lcob_message lcobMessage (-1, -1, fake_vc);
+    lcob_message lcobMessage = create_fake_lcobmessage(number_of_processes);
     b_message fake_payload(-1, -1, lcobMessage);
     return fake_payload;
 }
+
+lcob_message create_fake_lcobmessage(const int number_of_processes) {
+    vector<int> fake_vc(number_of_processes, INT32_MAX);   // Initialize it with stupid big numbers, so that it is not delivered as vc is too big!
+    lcob_message lcobMessage (-1, -1, fake_vc);
+    return lcobMessage;
+}
+

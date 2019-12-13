@@ -35,6 +35,10 @@ template<typename T>
 void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob){
     while (true) {
         lcob_message msg = lcob->get_next_delivered(lcob->interface);
+
+        if (stop_pp2p || is_lcobmessage_fake(msg)){
+            break;   // time to stop!
+        }
         // lcob->lcob_deliver(msg);   // up to now deliver immediately, as if we are doing fifo
         // first check if the message can be delivered immediately (vc is OK)
 
@@ -49,8 +53,6 @@ void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob){
             // otherwise update the
             lcob->graph->nodes[{msg.first_sender, msg.seq_number}]->update_existing_node(msg, lcob->local_vc);
         }
-
-
         lcob->graph->nodes[{msg.first_sender, msg.seq_number}]->deliver_recursively(lcob->local_vc);
     }
 }

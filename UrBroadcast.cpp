@@ -62,7 +62,11 @@ void UrBroadcast::urb_deliver(b_message &msg) {
  */
 b_message UrBroadcast::get_next_urb_delivered() {
     unique_lock<mutex> lck(mtx_urb_delivering_queue);
-    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue->empty(); });
+    cv_urb_delivering_queue.wait(lck, [&] { return !urb_delivering_queue->empty() || stop_pp2p; });
+    if (stop_pp2p){
+        b_message fake = create_fake_bmessage(this->number_of_processes);
+        return fake;
+    }
     urb_delivering_queue_locked = true;
     b_message next_message = this->urb_delivering_queue->front();
     this->urb_delivering_queue->pop();
