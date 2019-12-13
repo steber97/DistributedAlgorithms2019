@@ -8,7 +8,6 @@
 #include "utilities.h"
 #include "UrBroadcast.h"
 #include "BeBroadcast.h"
-#include "FifoBroadcast.h"
 #include "LocalCausalBroadcast.h"
 
 using namespace std;
@@ -20,6 +19,11 @@ int process_number;
 int number_of_processes;
 
 int sockfd;
+
+Link* pp2p_link;
+BeBroadcast* beb;
+UrBroadcast* urb;
+LocalCausalBroadcast<UrBroadcast>* lcob;
 
 static void start(int signum) {
 	wait_for_start = 0;
@@ -45,10 +49,10 @@ static void stop(int signum) {
     cv_urb_delivering_queue.notify_all();
 
 
-    sleep(2);   // wait for sender and receiver to stop, so that after the below writing no message is received or sent.
-
     //immediately stop network packet processing
-	printf("Immediately stopping network packet processing.\n");
+    printf("Immediately stopping network packet processing.\n");
+
+    sleep(2);   // wait for sender and receiver to stop, so that after the below writing no message is received or sent.
 
 	//write/flush output file if necessary
 	printf("Writing output.\n");
@@ -61,8 +65,12 @@ static void stop(int signum) {
         out << line << endl;
     }
     mtx_log.unlock();
-    // Give time to every detached thread
-    sleep(5);
+
+    // Delete pointers for broadcast classes. They won't be used anymore.
+    delete(pp2p_link);
+    delete(beb);
+    delete(urb);
+    delete(lcob);
 
 	//exit directly from signal handler
 	exit(0);
@@ -84,8 +92,6 @@ int main(int argc, char** argv) {
 
     // it is a global variable, used even in the signal handler to manage the output file.
     process_number = atoi(argv[1]);
-
-    cout << "The process id is " << ::getpid() << endl;
 
 	//parse arguments, including membership
 	//initialize application
@@ -121,11 +127,10 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    Link* link = new Link(sockfd, process_number, input_data, number_of_processes);
-    BeBroadcast* beb = new BeBroadcast(link, number_of_processes, number_of_messages);
-    UrBroadcast* urb = new UrBroadcast(beb, number_of_processes, number_of_messages);
-    // FifoBroadcast* fb = new FifoBroadcast(urb, number_of_processes);
-    LocalCausalBroadcast<UrBroadcast>* lcob = new LocalCausalBroadcast<UrBroadcast>(number_of_processes,
+    pp2p_link = new Link (sockfd, process_number, input_data, number_of_processes);
+    beb = new BeBroadcast(pp2p_link, number_of_processes, number_of_messages);
+    urb = new UrBroadcast(beb, number_of_processes, number_of_messages);
+    lcob = new LocalCausalBroadcast<UrBroadcast>(number_of_processes,
             number_of_messages, urb, dependencies, process_number);
 
     // Resize the number of acks (at the perfect link layer)
@@ -134,10 +139,9 @@ int main(int argc, char** argv) {
     // Resize the delivered messages matrix (at the perfect link layer) It is used to avoid duplicates.
     pl_delivered.resize(number_of_processes+1, unordered_set<long long>());
 
-    link->init();
+    pp2p_link->init();
     beb->init();
     urb->init();
-    // fb->init();
     lcob->init();
 
     //wait until start signal
@@ -156,11 +160,7 @@ int main(int argc, char** argv) {
 	vector<int> vector_clock_false(number_of_processes+1, 0);
 
     for (int i = 1; i <= number_of_messages; i++) {
-        lcob_message lcob_msg (i, link->get_process_number(), vector_clock_false);
-        b_message msg(i, process_number, lcob_msg);
-        //beb->beb_broadcast(msg);
-        //urb->urb_broadcast(msg);
-        //fb->fb_broadcast(msg);
+        lcob_message lcob_msg (i, pp2p_link->get_process_number(), vector_clock_false);
         lcob->lcob_broadcast(lcob_msg);
         usleep(1000);
     }
