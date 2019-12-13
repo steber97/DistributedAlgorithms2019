@@ -75,6 +75,7 @@ private:
     bool can_be_delivered();
 
 
+
 public:
     /**
      * This method must build the node.
@@ -129,6 +130,12 @@ class Graph{
     // order process, message -> node
 public:
     unordered_map<pair<int, int>, Node<T>*, pair_hash> nodes;
+
+    ~Graph(){
+        for (pair<pair<int,int>, Node<T>*> el: nodes ){
+            delete(el.second);
+        }
+    }
 };
 
 

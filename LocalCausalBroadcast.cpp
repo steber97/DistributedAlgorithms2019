@@ -55,6 +55,8 @@ void handle_delivered_lcob(LocalCausalBroadcast<T> *lcob){
         }
         lcob->graph->nodes[{msg.first_sender, msg.seq_number}]->deliver_recursively(lcob->local_vc);
     }
+
+    delete(lcob->graph);
 }
 
 
@@ -90,7 +92,7 @@ Node<T>::Node(bool received, Graph<T> *graph,
     this->lcob = lcob;
     this->unmet_dependencies = 0;
 
-    if (received == true){
+    if (received){
         // the message is true only when creating it after having received the message.
         // otherwise it is just a fake message
         this->msg = msg;
