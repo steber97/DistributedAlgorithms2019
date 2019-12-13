@@ -187,9 +187,11 @@ void run_sender(unordered_map<int, pair<string, int>>* socket_by_process_id, int
         } else {
             mtx_outgoing_messages.unlock();
         }
+
         if (sigkill){   // sigkill is atomic, no need to manage concurrency
             break;
         }
+        usleep(10);    // Wait a while, empirically proves to be better.
     }
 }
 
